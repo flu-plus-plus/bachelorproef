@@ -59,12 +59,12 @@ public:
 	/// Search for the last date written.
 	boost::gregorian::date GetLastDate();
 
+	/// Writes the Atlas
+	void WriteAtlas(const Atlas&);
+
 private:
 	/// Writes the current population to a checkpoint.
 	void WritePopulation(const Population&, boost::gregorian::date);
-
-	/// Writes the Atlas
-	void WriteAtlas(const Atlas&);
 
 	/// Writes the clusters to a checkpoint.
 	void WriteClusters(const ClusterStruct&, boost::gregorian::date);
@@ -97,6 +97,12 @@ private:
 	/// Writes a dataset to a file. The first string is the filename in the data folder. The second string is the
 	/// name of the dataset
 	std::string WriteDSetFile(const std::string&, const std::string&);
+
+	/// Writes the towns from the Atlas
+	void WriteTowns(const Atlas&);
+
+	/// Loads the towns into the Atlas
+	void LoadTowns(Atlas&);
 
 	hid_t m_file;		      //< current hdf5 workspace
 	const std::string m_filename; //< filename
@@ -165,6 +171,15 @@ private:
 		unsigned int ClusterType;
 		double latitude;
 		double longitude;
+	};
+
+	struct h_town
+	{	
+		double latitude;
+		double longitude;
+		unsigned int size;
+		unsigned int id;
+		std::string name;
 	};
 };
 

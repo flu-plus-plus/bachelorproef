@@ -68,6 +68,7 @@ void StrideSimulatorResult::BeforeSimulatorStep(Simulator& sim)
 			// saves the start configuration
 			cp->OpenFile();
 			cp->SaveCheckPoint(sim, day);
+			cp->WriteAtlas(sim.GetPopulation()->GetAtlas());
 			cp->CloseFile();
 		}
 	}

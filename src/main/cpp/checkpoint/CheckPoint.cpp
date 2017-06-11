@@ -326,16 +326,6 @@ void CheckPoint::SaveCheckPoint(const Simulator& sim, std::size_t day)
 	WriteExpatriates(exp, sim.GetDate());
 	auto vis = sim.GetVistiorJournal();
 	WriteVisitors(vis, sim.GetDate(), day);
-
-	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
-	if (exist <= 0) {
-		hid_t group = H5Gcreate2(m_file, "Config", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-		htri_t exist2 = H5Lexists(group, "Atlas", H5P_DEFAULT);
-		if (exist2 <= 0) {
-			WriteAtlas(sim.GetPopulation()->GetAtlas());
-		}
-		H5Gclose(group);
-	}
 }
 
 void CheckPoint::CombineCheckPoint(unsigned int groupnum, const std::string& filename)
@@ -897,6 +887,7 @@ multiregion::VisitorJournal CheckPoint::LoadVisitors(boost::gregorian::date date
 
 void CheckPoint::WriteAtlas(const Atlas& atlas)
 {
+	std::cout<<"Writing the Atlas"<<std::endl;
 	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
 	if (exist <= 0) {
 		hid_t temp = H5Gcreate2(m_file, "Config", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -931,6 +922,50 @@ void CheckPoint::WriteAtlas(const Atlas& atlas)
 	H5Tclose(newType);
 	H5Sclose(dataspace);
 	H5Dclose(dataset);
+
+	WriteTowns(atlas);
+}
+
+void CheckPoint::WriteTowns(const Atlas& atlas)
+{
+	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
+	if (exist <= 0) {
+		hid_t temp = H5Gcreate2(m_file, "Config", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+		H5Gclose(temp);
+	}
+
+	std::vector<h_town> data;
+	for(auto& i: atlas.town_map){
+		h_town toAdd;
+		toAdd.latitude = i.first.latitude;
+		toAdd.longitude = i.first.longitude;
+		toAdd.size = i.second.size;
+		toAdd.id = i.second.id;
+		toAdd.name = i.second.name;
+		data.push_back(toAdd);
+	}
+	hid_t strType = H5Tcopy(H5T_C_S1);
+	H5Tset_size(strType, H5T_VARIABLE);
+
+	hid_t newType = H5Tcreate(H5T_COMPOUND, sizeof(h_town));
+
+	H5Tinsert(newType, "Latitude", HOFFSET(h_town, latitude), H5T_NATIVE_DOUBLE);
+	H5Tinsert(newType, "Longitude", HOFFSET(h_town, longitude), H5T_NATIVE_DOUBLE);
+	H5Tinsert(newType, "Size", HOFFSET(h_town, size), H5T_NATIVE_UINT);
+	H5Tinsert(newType, "ID", HOFFSET(h_town, id), H5T_NATIVE_UINT);
+	H5Tinsert(newType, "Name",HOFFSET(h_town,name),strType);
+
+	hsize_t dims = data.size();
+	hid_t dataspace = H5Screate_simple(1, &dims, nullptr);
+
+	hid_t dataset = H5Dcreate2(m_file, "Config/Towns", newType, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	H5Dwrite(dataset, newType, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
+
+	H5Tclose(newType);
+	H5Tclose(strType);
+	H5Sclose(dataspace);
+	H5Dclose(dataset);
+
 }
 
 void CheckPoint::LoadAtlas(Population& pop)
