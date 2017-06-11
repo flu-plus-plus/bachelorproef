@@ -102,7 +102,7 @@ private:
 	void WriteTowns(const Atlas&);
 
 	/// Loads the towns into the Atlas
-	void LoadTowns(Atlas&);
+	void LoadTowns(Population&);
 
 	hid_t m_file;		      //< current hdf5 workspace
 	const std::string m_filename; //< filename
@@ -179,7 +179,7 @@ private:
 		double longitude;
 		unsigned int size;
 		unsigned int id;
-		std::string name;
+		const char* name;
 	};
 };
 

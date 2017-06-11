@@ -887,7 +887,6 @@ multiregion::VisitorJournal CheckPoint::LoadVisitors(boost::gregorian::date date
 
 void CheckPoint::WriteAtlas(const Atlas& atlas)
 {
-	std::cout<<"Writing the Atlas"<<std::endl;
 	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
 	if (exist <= 0) {
 		hid_t temp = H5Gcreate2(m_file, "Config", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -935,13 +934,13 @@ void CheckPoint::WriteTowns(const Atlas& atlas)
 	}
 
 	std::vector<h_town> data;
-	for(auto& i: atlas.town_map){
+	for (auto& i : atlas.town_map) {
 		h_town toAdd;
 		toAdd.latitude = i.first.latitude;
 		toAdd.longitude = i.first.longitude;
 		toAdd.size = i.second.size;
 		toAdd.id = i.second.id;
-		toAdd.name = i.second.name;
+		toAdd.name = i.second.name.c_str();
 		data.push_back(toAdd);
 	}
 	hid_t strType = H5Tcopy(H5T_C_S1);
@@ -953,7 +952,7 @@ void CheckPoint::WriteTowns(const Atlas& atlas)
 	H5Tinsert(newType, "Longitude", HOFFSET(h_town, longitude), H5T_NATIVE_DOUBLE);
 	H5Tinsert(newType, "Size", HOFFSET(h_town, size), H5T_NATIVE_UINT);
 	H5Tinsert(newType, "ID", HOFFSET(h_town, id), H5T_NATIVE_UINT);
-	H5Tinsert(newType, "Name",HOFFSET(h_town,name),strType);
+	H5Tinsert(newType, "Name", HOFFSET(h_town, name), strType);
 
 	hsize_t dims = data.size();
 	hid_t dataspace = H5Screate_simple(1, &dims, nullptr);
@@ -965,13 +964,12 @@ void CheckPoint::WriteTowns(const Atlas& atlas)
 	H5Tclose(strType);
 	H5Sclose(dataspace);
 	H5Dclose(dataset);
-
 }
 
 void CheckPoint::LoadAtlas(Population& pop)
 {
 	std::string dsetName = "Config/Atlas";
-	htri_t exist = H5Lexists(m_file, dsetName.c_str(), H5P_DEFAULT);
+	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
 	if (exist <= 0) {
 		return;
 	}
@@ -999,6 +997,47 @@ void CheckPoint::LoadAtlas(Population& pop)
 		postion.longitude = c.longitude;
 		pop.AtlasEmplaceCluster(key, postion);
 	}
+	LoadTowns(pop);
+}
+
+void CheckPoint::LoadTowns(Population& pop)
+{
+	std::string dsetName = "Config/Towns";
+	htri_t exist = H5Lexists(m_file, dsetName.c_str(), H5P_DEFAULT);
+	if (exist <= 0) {
+		return;
+	}
+	hid_t dset = H5Dopen2(m_file, dsetName.c_str(), H5P_DEFAULT);
+
+	hid_t dspace = H5Dget_space(dset);
+
+	hsize_t dims;
+	H5Sget_simple_extent_dims(dspace, &dims, nullptr);
+
+	hid_t newType = H5Dget_type(dset);
+
+	std::vector<h_town> data(dims);
+
+	H5Dread(dset, newType, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
+
+	H5Sclose(dspace);
+	H5Dclose(dset);
+	H5Tclose(newType);
+	Atlas::TownMap map;
+	for (auto& i: data) {
+		geo::GeoPosition position;
+		Atlas::Town town = Atlas::Town("",0);
+		position.latitude = i.latitude;
+		position.longitude = i.longitude;
+
+		town.id = i.id;
+		town.size = i.size;
+		town.name = std::string(i.name);
+
+		map.emplace(position,town);
+	}
+
+	pop.AtlasRegisterTowns(map);
 }
 
 boost::gregorian::date CheckPoint::GetLastDate()
