@@ -9,7 +9,10 @@
     <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
     <link rel="stylesheet" type="text/css" href="jquery.svg/jquery.svg.css"> 
+
+    <!-- jQuery SVG -->
     <script type="text/javascript" src="jquery.svg/jquery.svg.min.js"></script>
+    <script type="text/javascript" src="jquery.svg/jquery.svggraph.min.js"></script>
 
     <!-- jQuery UI -->
     <script src="jquery-ui/jquery-ui.min.js"></script>
@@ -27,7 +30,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 
-<body>
+<body style="overflow: hidden">
     <div class="control panel">
         <div class="panel-head">Control panel</div>
 
@@ -60,19 +63,28 @@
     </div>
 
     <div class="general-info panel">
-        <div class="panel-head">General info</div>
+        <div class="panel-head">General stats</div>
         <div class="panel-body">
             <div> Total days: <span class="info days">-</span> </div>
-            <div> Most infected: <span class="info most-total-infected">-</span> on day <span class="info most-total-infected-day">-</span> </div>
+            <div> Total people: <span class="info total-people">-</span> </div>
+            <div> Most infected: <span class="info most-total-infected">-</span> on day <span class="info most-total-infected-day clickable">-</span> </div>
         </div>
     </div>
 
     <div class="daily-info panel">
-        <div class="panel-head">Daily info</div>
+        <div class="panel-head">Daily stats</div>
         <div class="panel-body">
             <div> Day: <span class="info current-day">-</span> / <span class="info days">-</span> </div>
-            <div> Infected: <span class="info total-infected">-</span> </div>
-            <div> Most infected: <span class="info most-current-infected">-</span> in <span class="info most-current-infected-town">-</span></div>
+            <div> Infected: <span class="info total-infected">-</span> / <span class="info total-people">-</span> = <span class="info percentage-infected">-</span> </div>
+            <div> Most infected: <span class="info most-current-infected">-</span> in <span class="info most-current-infected-town clickable">-</span></div>
+        </div>
+    </div>
+
+    <div class="graph panel">
+        <div class="panel-head">Total infected over time</div>
+
+        <div class="panel-body graph-view">
+            <!-- Graph goes here! -->
         </div>
     </div>
 
@@ -81,21 +93,42 @@
 
         <div class="panel-body">
             <div class="dropdown gradient-input">
-                <button class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" disabled>
+                <button class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" disabled>
                     Colours <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu"> </ul>
+            </div>
+            <div class="dropdown colour-mode-input">
+                <button class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" disabled>
+                    Scale <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu"> 
+                    <li><a onclick="visualizer.setGradientMode('count')">Count</a></li>
+                    <li><a onclick="visualizer.setGradientMode('percent')">Percentage</a></li>
+                </ul>
             </div>
             <div class="legend-view" style="margin-top:10px"> 
                 <!-- legend goes here -->
             </div>
         </div>
     </div>
-    
-    <div id="view" class="container">
+
+    <div id="view" class="container" style="margin-top: 10px; position: relative; height:90%">
+
+        <ul class="nav nav-tabs" style="margin-left: 20px">
+            <li class="active"><a data-toggle="tab" href="#map-view-pane">Map</a></li>
+            <li><a data-toggle="tab" href="#table-view-pane">Table</a></li>
+        </ul>
+
         <!-- This is where the script puts the views. -->
-        <div class="map-view" width="100%" height="100%"> </div>
-        <div class="table-view"> </div>
+
+        <div id="map-view-pane" class="tab-pane fade in active" style="position: absolute">
+            <div class="map-view unselectable" width="100%" height="100%"> </div>
+        </div>
+
+        <div id="table-view-pane" class="tab-pane fade">
+            <div class="table-view" style="padding-left:5%; width:90%"> </div>
+        </div>
     </div>
 </body>
 

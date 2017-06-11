@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<population_model>
+    <!-- Generation parameters -->
+    <school_size>500</school_size>
+    <school_cluster_size>20</school_cluster_size>
+    <college_size>3000</college_size>
+    <college_cluster_size>50</college_cluster_size>
+    <workplace_size>50</workplace_size>
+    <community_size>2000</community_size>
+    <search_radius>10.0</search_radius> <!-- in kilometers -->
+
+    <!-- Population/city/town parameters -->
+    <population_size>500000</population_size>
+    <city_ratio>0.4</city_ratio>
+    <town_distribution>
+        <town_range>
+            <minimum>10</minimum>
+            <maximum>100</maximum>
+            <probability>0.7</probability>
+        </town_range>
+        <town_range>
+            <minimum>100</minimum>
+            <maximum>1000</maximum>
+            <probability>0.3</probability>
+        </town_range>
+    </town_distribution>
+
+    <!-- School-work profile -->
+    <school_age><minimum>3</minimum><maximum>18</maximum></school_age>
+    <college_age><minimum>18</maximum><maximum>26</maximum></college_age>
+    <college_ratio>0.5</college_ratio>
+    <college_commute_ratio>0.5</college_commute_ratio>
+    <employable_age><minimum>18</minimum><maximum>65</maximum></employable_age>
+    <employed_ratio>0.7</employed_ratio>
+    <work_commute_ratio>0.5</work_commute_ratio>
+</population_model>

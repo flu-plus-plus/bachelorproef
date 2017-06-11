@@ -48,19 +48,15 @@ Map.prototype.fitTo = function(width, height){
 Map.prototype.getCrop = function(width, height, focusBox, margin=1.2){
     var fullLat = this.box.maxLat - this.box.minLat;
     var fullLong = this.box.maxLong - this.box.minLong;
-    console.log(fullLat, fullLong);
 
     var dLat = focusBox.maxLat - focusBox.minLat;
     var dLong = focusBox.maxLong - focusBox.minLong;
-    console.log(dLat, dLong);
 
     var out = {};
 
     var viewLat = (dLat * margin) / fullLat;
     var viewLong = (dLong * margin) / fullLong;
-    console.log(viewLat, viewLong);
     var viewBoxRatio = fullLat / fullLong * this.imageRatio * dLong / dLat;
-    console.log(viewBoxRatio);
 
     // Determine how our focus box can take up as much space as possible
     // without squashing or stretching the image it's projected on.

@@ -29,9 +29,11 @@ build*/
 #------------------------------------
 # Latex stuff
 #------------------------------------
-/src/doc/latex_user_man/UserManual.aux
-/src/doc/latex_user_man/UserManual.bbl
-/src/doc/latex_user_man/UserManual.blg
-/src/doc/latex_user_man/UserManual.out
-/src/doc/latex_user_man/UserManual.synctex.gz
-/src/doc/latex_user_man/UserManual.toc
+src/doc/latex_user_man/UserManual.aux
+src/doc/latex_user_man/UserManual.bbl
+src/doc/latex_user_man/UserManual.blg
+src/doc/latex_user_man/UserManual.out
+src/doc/latex_user_man/UserManual.synctex.gz
+src/doc/latex_user_man/UserManual.toc
+src/doc/latex_user_man/UserManual.pdf
+src/doc/latex_user_man/*.log

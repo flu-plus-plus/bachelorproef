@@ -1,0 +1,96 @@
+%%!TEX root = ./UserManual.tex
+\chapter{Multi-region simulations}
+
+In addition to traditional single-region simulations, Stride also supports multi-region simulations. A multi-region simulation consists of multiple sub-simulations, each of which simulates a region. Each sub-simulation runs in isolation, but at the end of each simulation step, i.e., a day, visitors are exchanged between regions.
+
+There are two ways to create a multi-region simulation configuration: you can either create a set of independent sub-simulations and run them in parallel or create interdependent sub-simulations that communicate by exchanging visitors.
+
+\section{Independent regions}
+
+If you don't care for exchanging visitors, then you can simply include more than one population file in a simulation configuration. This will run the simulations in parallel without any interaction between them -- Stride detects that they do not exchange visitors and declines to run them in lockstep.
+
+Listing \ref{lst:independent-multi-region-sim-config} is an abbreviated version of a multi-region configuration file with independent regions.
+
+\begin{figure}[h]
+	\lstset{language=xml,caption={A simple multi-region simulation configuration.},label={lst:independent-multi-region-sim-config}}
+	\begin{lstlisting}
+<?xml version="1.0" encoding="utf-8"?>
+<run>
+  ...
+  <population_file>pop_nassau.csv</population_file>
+  <population_file>pop_oklahoma.csv</population_file>
+  ...
+</run>
+	\end{lstlisting}
+\end{figure}
+
+
+\section{Interdependent regions}
+
+To create simulations that do exchange visitors and can hence transmit diseases, you'll need to create a separate file that models visitors traveling between regions.
+
+Listing \ref{lst:multi-region-travel-model} is an example multi-region travel model.
+
+\begin{figure}[h]
+	\lstset{language=xml,caption={An example travel model.},label={lst:multi-region-travel-model}}
+	\begin{lstlisting}
+<?xml version="1.0" encoding="utf-8"?>
+<travel_model min_trip_duration="1" max_trip_duration="4">
+  <region population_file="pop_nassau.csv" travel_fraction="0.01">
+    <airport name="JFK" passenger_fraction="2">
+      <route passenger_fraction="3">FDR</route>
+    </airport>
+  </region>
+  <region population_file="pop_oklahoma.csv" travel_fraction="0.01">
+    <airport name="FDR">
+      <route>JFK</route>
+    </airport>
+  </region>
+</travel_model>
+	\end{lstlisting}
+\end{figure}
+
+The structure of a multi-region travel model is as follows:
+
+\begin{itemize}
+	\item A region \textbf{travel model} (\texttt{<travel\_model>}) contains
+	\begin{itemize}
+		\item the minimal duration of a trip abroad (\texttt{min\_trip\_duration}, default value: 1),
+		\item the maximal duration of a trip abroad (\texttt{max\_trip\_duration}, default value: 4), and
+		\item a set of \textbf{regions}.
+	\end{itemize}
+
+	\item A \textbf{region} (\texttt{<region>}) consists of
+	\begin{itemize}
+		\item a population file for the region,
+		\item the fraction of the region's population (\texttt{travel\_fraction}) that leaves for another region on each simulation step, and
+		\item a set of \textbf{airports}.
+	\end{itemize}
+
+	\item An \textbf{airport} (\texttt{<airport>}) defines
+	\begin{itemize}
+		\item a unique name,
+		\item the fraction of passengers (\texttt{passenger\_fraction}, default value: 1) that depart from this airport as opposed to some other airport in the same region (the value of the \texttt{passenger\_fraction} attribute is normalized by dividing it by the sum of all \texttt{passenger\_fraction} attribute values for the current region), and
+		\item A set of \textbf{routers}.
+	\end{itemize}
+
+	\item A \textbf{route} (\texttt{<route>}) is composed of
+	\begin{itemize}
+		\item the fraction of passengers (\texttt{passenger\_fraction}, default value: 1) taking this route as opposed to some other route from the same airport (\texttt{passenger\_fraction} values are also normalized), and
+		\item the name of the target \textbf{airport}.
+	\end{itemize}
+\end{itemize}
+
+Once a travel model has been created, it can be included in a simulation configuration in lieu of a population file, using a \texttt{<travel\_file>} node.
+
+\begin{figure}[h]
+	\lstset{language=xml,caption={An interdependent multi-region simulation configuration.},label={lst:interdependent-multi-region-sim-config}}
+	\begin{lstlisting}
+<?xml version="1.0" encoding="utf-8"?>
+<run>
+  ...
+  <travel_file>travel_test.xml</travel_file>
+  ...
+</run>
+	\end{lstlisting}
+\end{figure}

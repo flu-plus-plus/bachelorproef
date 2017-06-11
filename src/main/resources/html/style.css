@@ -2,27 +2,32 @@ body{
 }
 
 .panel{
-    background-color: #ccc;
+    background-color: #ddd;
     color: black;
+    box-shadow: rgba(0,0,255,0.15) 0px 2px 6px;
 
     border-radius: 6px;
     border-bottom: 2px solid #bbc;
 
     padding: 8px;
     padding-left: 12px;
+    padding-right: 12px;
+    display: inline-block;
+    min-width: 100px;
 
-    position: fixed;
+    position: absolute;
 }
 
     .panel > .panel-head{
         font-size: 1.4em;
-        background-color: #ddd;
+        background-color: #ccd;
 
         border-bottom: 2px solid #bbc;
 
         border-radius: 6px;
-        margin: -9px;
+        margin-top: -9px;
         margin-left: -13px;
+        margin-right: -13px;
         margin-bottom: 8px;
 
         padding: 5px;
@@ -30,16 +35,26 @@ body{
 
         cursor: all-scroll;
     }
+    
+    .panel > .panel-body{
+        padding: 0px;
+    }
 
-    .panel > .panel-head > .collapse-toggle{
+        .panel.collapsed > .panel-body{
+            visibility: hidden;
+            height: 0;
+            margin-bottom: -10px;
+            margin-top: -10px;
+        }
+
+
+    .generic.panel{
         position: absolute;
-        right: 10px;
-        font-weight: bold;
-        cursor: pointer;
-        color: #99D;
+        z-index: 11;
     }
 
     .control.panel{
+        position: fixed;
         z-index: 10;
         left: 30px;
         top: 20px;
@@ -47,7 +62,7 @@ body{
 
     .general-info.panel{
         z-index: 9;
-        top: 200px;
+        top: 190px;
         left: 30px;
         width: 250px;
     }
@@ -59,23 +74,50 @@ body{
         width: 250px;
     }
 
+    .graph.panel{
+        z-index: 6;
+        top: 450px;
+        left: 30px;
+        min-width: 150px;
+    }
+
     .legend.panel{
         z-index: 7;
         top: 20px;
-        right: 250px;
+        right: 240px;
         width: 120px;
-        position: absolute;
     }
 
-    .panel > .panel-body{
-        padding: 0px;
+.unselectable{
+    user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -o-user-select: none;
+}
+
+.clickable{
+    cursor: pointer;
+}
+
+.panel-button{
+    cursor: pointer;
+    color: #99D;
+    margin-left:5px;
+    float:right;
+    font-weight: bold;
+}
+    .panel-button:hover{
+        text-decoration: none;
+    }
+    .panel-button.toggle-collapse{
+        margin-right:5px;
+    }
+    .panel-button.close-panel{
+        margin-top:4px;
+        font-size:14px;
     }
 
-        .panel.collapsed > .panel-body{
-            visibility: hidden;
-            height: 0;
-            margin: -10;
-        }
 
 .filename-output{
     color: #222;
@@ -85,7 +127,6 @@ span.info{
     font-weight: bold;
     color: #186;
     text-shadow: 0px 1px 0px #2b8;
-
 }
 
 span.legend-circle{
@@ -97,7 +138,7 @@ span.legend-circle{
     border-color: #444;
 
     position: absolute;
-    left: 50px;
+    left: 60px;
 }
 
 input.range-input{
@@ -106,6 +147,16 @@ input.range-input{
     position: relative;
     top: 6px;
 }
+    input.range-input::-webkit-slider-runnable-track {
+        height: 6px;
+        margin-top:-19px;
+        background: #aab;
+        border-top: 1px solid #88a;
+        border-radius: 4px;
+    }
+    input.range-input::-webkit-slider-thumb {
+        margin-top: -8px;
+    }
 
 .day-control > button{
     padding-bottom: 4px;
@@ -115,11 +166,28 @@ input.range-input{
     margin-left: 65px;
 }
 
+#table-view-pane{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+    #table-view-pane > .table-view{
+        overflow-y: scroll;
+        height: 100%;
+    }
+
+.fade{
+    pointer-events: none;
+}
+
+.fade.in{
+    pointer-events: auto;
+}
+
 .map-view{
     position: relative;
     margin: 10px;
 }
-
     .map-view svg{
         position: absolute;
         top: 0;
@@ -132,7 +200,6 @@ input.range-input{
     position: relative;
     overflow: hidden;
 }
-
     .map-image-crop > img{
         /* cancel out the 2px border */
         margin:-2px;
@@ -142,7 +209,6 @@ circle{
     stroke: #444;
     stroke-width: 1px;
 }
-
     circle:hover{
         stroke: #222;
         stroke-width: 2px;

@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <travel_model>
     <region population_file="pop_nassau.csv" travel_fraction="0.01">
         <airport name="JFK" passenger_fraction="2">

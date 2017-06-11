@@ -16,19 +16,7 @@ $(document).ready(function(){
     refreshDraggable();
 
     // Make panels collapsible
-    function toggleCollapsed(){
-        var $target = $(this).parents().eq(1);
-        if($target.hasClass("collapsed")){
-            $(this).text("─");
-            $target.removeClass("collapsed");
-        } else {
-            $(this).text("+");
-            $target.addClass("collapsed");
-        }
-    }
-
-    var $x = $("<a>",{class:"collapse-toggle"}).text("─").on("click", toggleCollapsed);
-    $(".panel > .panel-head").append($x);
+    refreshCollapsable();
 })
 
 
@@ -70,7 +58,6 @@ function cleanData(data){
         town.long = parseFloat(town.long);
         townArray.push(town);
     }
-    console.log(townArray.length);
     data.towns = townArray;
 
     for(var i in data.days){
@@ -89,8 +76,10 @@ function cleanData(data){
 var Visualizer = function(inputSelector, controlSelector, viewSelector){
     // Place our hook into the file selector
     $(inputSelector).on('change', f => readSingleFile(f, this.handleFile.bind(this)));
+
     // Place our hooks into the controls
     this.initializeControls(controlSelector);
+
     // Remember our view
     this.$view = $(viewSelector);
 }
@@ -102,7 +91,7 @@ Visualizer.prototype.initialize = function(data){
     this.towns = data.towns;
     this.aggregateData();
 
-    // Debug method.
+    // Debug
     // this.addAlignmentTestNodes();
 
     // Put the total number of days
@@ -117,6 +106,68 @@ Visualizer.prototype.initialize = function(data){
     this.configureControls();
 }
 
+/// Handler passed to the FileReader, called with the contents of the selected file.
+Visualizer.prototype.handleFile = function(e) {
+    var data = JSON.parse(e.target.result);
+    cleanData(data);
+    this.initialize(data);
+}
+
+/// Extract useful information from our data.
+Visualizer.prototype.aggregateData = function(){
+    // Aggregate from towns
+    var maxTownSize = 0;
+    var totalSize = 0;
+    for(var t in this.towns){
+        var size = this.towns[t].size
+        maxTownSize = Math.max(maxTownSize, size);
+        totalSize += size;
+        var max = {day: 0, infected: 0};
+        for(var d in this.days){
+            if( this.days[d][t] > max.infected){
+                max.day = d;
+                max.infected = this.days[d][t];
+            }
+        }
+        this.towns[t].max = max;
+    }
+    this.maxTownSize = maxTownSize;
+    this.totalSize = totalSize;
+    $(".total-people").text(totalSize);
+
+    // Aggregate from days
+    var maxTotal = 0;
+    var maxTotalDay = 0;
+    var maxSingle = 0;
+    for(var d in this.days){
+        var total = 0;
+        var maxLocalSingle = 0;
+        var maxLocalSingleTown = 0;
+        for(var t in this.towns){
+            var single = this.days[d][t];
+            if(single == undefined)
+                continue;
+            total += single;
+            maxSingle = Math.max(maxSingle, single);
+            if(single > maxLocalSingle){
+                maxLocalSingle = single;
+                maxLocalSingleTown = t;
+            }
+        }
+        this.days[d].total = total;
+        this.days[d].max = {infected: maxLocalSingle, town: maxLocalSingleTown};
+        if(total > maxTotal){
+            maxTotal = total
+            maxTotalDay = d;
+        }
+    }
+    this.maxTotal = maxTotal;
+    $(".most-total-infected").text(maxTotal);
+    $(".most-total-infected-day").text(maxTotalDay);
+    $(".most-total-infected-day").unbind("click").on("click",()=>this.updateDay(maxTotalDay));
+    this.maxSingle = maxSingle;
+}
+
 /// Bind into the controls and set the appropriate events.
 Visualizer.prototype.initializeControls = function (controlSelector){
     $c = $(controlSelector);
@@ -129,9 +180,10 @@ Visualizer.prototype.initializeControls = function (controlSelector){
     c.$run = $c.find('.run-input');
     c.$loop = $c.find('.loop-input');
     c.$gradient = $('.gradient-input');
+    c.$colourMode = $('.colour-mode-input');
 
     // Used for enabling-disabling all at once
-    c.all = [c.$prevDay, c.$nextDay, c.$range, c.$run, c.$loop, c.$gradient.find("button")];
+    c.all = [c.$prevDay, c.$nextDay, c.$range, c.$run, c.$loop, c.$gradient.find("button"), c.$colourMode.find("button")];
 
     // Bind events
     c.$prevDay.on("click", this.prevDay.bind(this));
@@ -189,13 +241,6 @@ Visualizer.prototype.configureControls = function(){
     this.disableControls(false);
 }
 
-/// Select the gradient by the given name.
-Visualizer.prototype.selectGradient = function(name){
-    this.gradient = Gradient.gradients[name].scale(this.maxSingle);
-    this.updateLegend();
-    this.updateMap();
-}
-
 /// Control interface methods:
 Visualizer.prototype.prevDay = function(){ this.updateDay(visualizer.day - 1); }
 Visualizer.prototype.nextDay = function(){ this.updateDay(visualizer.day + 1); }
@@ -204,46 +249,6 @@ Visualizer.prototype.nextDay = function(){ this.updateDay(visualizer.day + 1); }
 Visualizer.prototype.disableControls = function(val=true){
     for(i in this.control.all)
         this.control.all[i].prop("disabled", val);
-}
-
-/// Handler passed to the FileReader, called with the contents of the selected file.
-Visualizer.prototype.handleFile = function(e) {
-    var data = JSON.parse(e.target.result);
-    cleanData(data);
-    this.initialize(data);
-}
-
-/// Extract useful information from our data.
-Visualizer.prototype.aggregateData = function(){
-    var maxTotal = 0;
-    var maxTotalDay = 0;
-    var maxSingle = 0;
-    for(var d in this.days){
-        var total = 0;
-        var maxLocalSingle = 0;
-        var maxLocalSingleTown = 0;
-        for(var t in this.towns){
-            var single = this.days[d][t];
-            if(single == undefined)
-                continue;
-            total += single;
-            maxSingle = Math.max(maxSingle, single);
-            if(single > maxLocalSingle){
-                maxLocalSingle = single;
-                maxLocalSingleTown = t;
-            }
-        }
-        this.days[d].total = total;
-        this.days[d].max = {infected: maxLocalSingle, town: maxLocalSingleTown};
-        if(total > maxTotal){
-            maxTotal = total
-            maxTotalDay = d;
-        }
-    }
-    this.maxTotal = maxTotal;
-    $(".most-total-infected").text(maxTotal);
-    $(".most-total-infected-day").text(maxTotalDay);
-    this.maxSingle = maxSingle;
 }
 
 /// Add a few easily recognisible items to the map for testing alignment of coordinates to the map.
@@ -258,41 +263,94 @@ Visualizer.prototype.addAlignmentTestNodes = function(){
 Visualizer.prototype.makeView = function(){
     this.makeTable();
     this.makeMap();
+    this.makeGraph();
 }
 
 /// Prepare the HTML document with a basic table.
 Visualizer.prototype.makeTable = function(){
     // Find and clear the view target
     $target = this.$view.find(".table-view");
-    $target.html('');
+    $target.html("");
 
     // Make a table
-    this.$table = $table = $('<table>', {class:'table table-striped table-condensed'});
+    this.$table = $table = $("<table>", {class:"table table-striped table-condensed"});
     $target.append($table);
 
     // Header
-    $row = $('<tr>');
-    $row.append($('<th>Name</th>'));
-    $row.append($('<th>Inhabitants</th>'));
-    $row.append($('<th>Infected</th>'));
-    $row.append($('<th>Percentage</th>'));
+    $row = $("<tr>");
+    $row.append($("<th>Name</th>"));
+    $row.append($("<th>Inhabitants</th>"));
+    $row.append($("<th>Current infected</th>"));
+    $row.append($("<th>Most infected</th>"));
     $table.append($row);
 
     // Rows
-    for(var i in this.towns){
+    for(let i in this.towns){
         var town = this.towns[i];
-        $row = $('<tr>', {id:noSpace(town.name)});
-        $row.append($('<td>' + town.name + '</td>'));
-        $row.append($('<td>' + town.size + '</td>'));
-        $row.append($('<td>', {class:'infected'}));
-        $row.append($('<td>', {class:'percent'}));
+        $row = $("<tr>",{town:noSpace(town.name)});
+        $row.append($("<td>").append($("<a>",{class:"clickable",onclick:`visualizer.makeTownPanel(${i})`}).text(town.name)));
+        $row.append($("<td>").text(town.size));
+        $current = $("<td>");
+        $current.append($("<span>", {class:"infected"}));
+        $current.append(" : ");
+        $current.append($("<span>", {class:"percent"}));
+        $row.append($current);
+        $max = $("<td>");
+        $max.append(`${town.max.infected} on day `);
+        $max.append($("<a>",{class:"clickable",onclick:`visualizer.updateDay(${town.max.day})`}).text(town.max.day));
+        $row.append($max);
         $table.append($row);
     }
 }
 
+/// Add a graph view to the page, doesn't need to be updated! 
+Visualizer.prototype.makeGraph = function(){
+    $target = $(".graph-view");
+    $target.svg("destroy");
+    $target.svg({settings: {width: "300px", height:"180px"}});
+    var $svg = $target.svg("get");
+
+    var percentList = [];
+    for(var i in this.days)
+        percentList.push(this.days[i].total * 100 / this.totalSize);
+
+    var percentLabels = [];
+    for(var i=0;i<=100;i+=10) percentLabels.push(i + "%");
+
+    $svg.graph.noDraw();
+
+    $svg.graph.addSeries("Infected", percentList, "#186", "#2b8", 1);
+    $svg.graph.options({barGap:0});
+    $svg.graph.legend.show(false);
+    $svg.graph.area(0.13, 0.1, 0.98, 0.85);
+    $svg.graph.gridlines({stroke: '#aaf', strokeDashArray: '2,4'});
+    $svg.graph.yAxis.ticks(10, 5, 8).labels(percentLabels).scale(0, clamp(this.maxTotal / this.totalSize * 120, 10, 100));
+    $svg.graph.xAxis.ticks(50, 30, 1).labels("", "transparent");
+
+    $svg.graph.redraw();
+}
+
+/// Choose how the circles are coloured.
+/// Options: "count" or "percent"
+Visualizer.prototype.setGradientMode = function(mode){
+    this.colourMode = mode;
+    this.updateLegend();
+    this.updateMap();
+}
+
+/// Select the gradient by the given name.
+Visualizer.prototype.selectGradient = function(name){
+    this.percentGradient = Gradient.gradients[name];
+    this.countGradient = this.percentGradient.scale(this.maxSingle);
+    this.updateLegend();
+    this.updateMap();
+}
+
 /// Initialize the gradient that governs map colouring.
 Visualizer.prototype.initializeLegend = function($target){
-    this.gradient = Gradient.gradients["Ultra heat map"].scale(this.maxSingle);
+    this.colourMode = "count";
+    this.percentGradient = Gradient.gradients["Ultra heat map"];
+    this.countGradient = this.percentGradient.scale(this.maxSingle);
     this.$legend = $(".legend-view");
     this.updateLegend();
 }
@@ -300,12 +358,77 @@ Visualizer.prototype.initializeLegend = function($target){
 // Updates the legend to match the contents of the selected colour gradient.
 Visualizer.prototype.updateLegend = function(){
     this.$legend.html("");
-    for(i in this.gradient.colourMap){
+    for(i in this.countGradient.colourMap){
         $item = $("<div>", {class: "legend-item"});
-        $item.text(Math.round(this.gradient.colourMap[i].val));
-        $item.append($("<span>", {class:"legend-circle",style:"background-color:"+this.gradient.colourMap[i].colour.toString()}));
+
+        var colour;
+        if(this.colourMode == "count"){
+            $item.text(Math.round(this.countGradient.colourMap[i].val));
+            colour = this.countGradient.colourMap[i].colour.toString();
+        }
+        else if(this.colourMode == "percent"){
+            $item.text(percentFormat(this.percentGradient.colourMap[i].val, 0));
+            colour = this.percentGradient.colourMap[i].colour.toString();
+        }
+
+        $item.append($("<span>", {class:"legend-circle",style:"background-color:"+colour}));
+
         this.$legend.append($item);
     }
+}
+
+var basePanelX = 30;
+var panelX = basePanelX + 30;
+var basePanelY = 450;
+var panelY = basePanelY + 30;
+
+Visualizer.prototype.makeTownPanel = function(townId){
+    var town = this.towns[townId];
+
+    var x = panelX;
+    var y = panelY;
+    panelX = (panelX - basePanelX + 30) % 330 + basePanelX;
+    panelY = (panelY - basePanelY + 30) % 240 + basePanelY;
+
+    var text = 
+    `<div> Infected: <span class=\"info infected\">-</span> /
+    <span class=\"info \">${town.size}</span> =
+    <span class=\"info percent\">-</span> </div>
+    <div> Most infected: <span class=\"info\">${town.max.infected}</span> on day
+    <span class=\"info clickable\" onclick="visualizer.updateDay(${town.max.day})">${town.max.day}</span> </div>`;
+
+    $panel = makePanel(x, y, town.name, text);
+    $panel.css("min-width", "200px");
+    $panel.body.attr("town", noSpace(town.name));
+
+    $("body").append($panel);
+
+    var $target = $("<div>");
+    $panel.body.append($target);
+    $target.svg("destroy");
+    $target.svg({settings: {width: "220px", height:"120px"}});
+    var $svg = $target.svg("get");
+
+    var percentList = [];
+    for(var i in this.days)
+        percentList.push((this.days[i][townId]||0) * 100 / town.size);
+
+    var percentLabels = [];
+    for(var i=0;i<=100;i+=10) percentLabels.push(i + "%");
+
+    $svg.graph.noDraw();
+
+    $svg.graph.addSeries("Infected", percentList, "#186", "#2b8", 1);
+    $svg.graph.options({barGap:0});
+    $svg.graph.legend.show(false);
+    $svg.graph.area(0.18, 0.1, 0.98, 0.85);
+    $svg.graph.gridlines({stroke: '#aaf', strokeDashArray: '2,4'});
+    $svg.graph.yAxis.ticks(10, 5, 8).labels(percentLabels).scale(0, clamp(town.max.infected / town.size * 120, 10, 100));
+    $svg.graph.xAxis.ticks(50, 30, 1).labels("", "transparent");
+
+    $svg.graph.redraw();
+
+    this.updateTable();
 }
 
 /// Prepare the HTML document with a basic table.
@@ -321,7 +444,8 @@ Visualizer.prototype.makeMap = function(){
     var width = 1100;
     var height = 800;
 
-    this.sizeFunc = val => Math.sqrt(val) * 8/Math.sqrt(this.maxSingle) + 2;
+    this.infectedSizeFunc = val => Math.sqrt(val) * 8/Math.sqrt(this.maxSingle) + 2;
+    this.townSizeFunc = val => Math.pow(val, 0.3) * 10/Math.pow(this.maxTownSize, 0.3) + 2;
 
     // Check if any of the data fits inside a known map.
     for(i in Map.maps){
@@ -349,8 +473,8 @@ Visualizer.prototype.makeMap = function(){
     var svgMap = $target.svg("get");
 
     // Fill it with circles
-    for(var i in this.towns){
-        var town = this.towns[i];
+    for(let i in this.towns){
+        let town = this.towns[i];
         // Determine its features
         var x = percentFormat(longFunc(town.long));
         var y = percentFormat(1- latFunc(town.lat));
@@ -367,6 +491,8 @@ Visualizer.prototype.makeMap = function(){
         dot.setAttribute("title", town.name);
         dot.setAttribute("data-toggle", "tooltip");
         dot.setAttribute("data-container", "body");
+        dot.setAttribute("r", this.townSizeFunc(town.size));
+        dot.onclick = ()=>this.makeTownPanel(i);
     }
     refreshTooltips();
 }
@@ -389,15 +515,18 @@ Visualizer.prototype.findBox = function(){
 /// Update the view to match the info at that day.
 Visualizer.prototype.updateDay = function(day){
     // clamp day to the valid range
+    day = parseInt(day);
     day = clamp(day, 0, this.maxDays-1);
 
     this.day = day;
     $('.current-day').text(1 + day);
     this.control.$range.prop("value", day);
     $('.total-infected').text(this.days[day].total);
+    $('.percentage-infected').text(percentFormat(this.days[day].total/this.totalSize));
     $('.most-current-infected').text(this.days[day].max.infected);
     $('.most-current-infected-town').text(this.towns[this.days[day].max.town].name);
-
+    $('.most-current-infected-town').unbind("click");
+    $('.most-current-infected-town').on("click", ()=>this.makeTownPanel(this.days[day].max.town));
 
     this.updateView();
 }
@@ -413,18 +542,18 @@ Visualizer.prototype.updateTable = function(){
     var currentDay = this.days[this.day];
 
     // Update each column
-    for(town in this.towns){
+    for(var town in this.towns){
         var count = currentDay[town] || 0;
 
         // Find the table column for the given town
-        var $col = this.$table.find('#' + noSpace(this.towns[town].name));
+        var $col = $("[town=" + noSpace(this.towns[town].name + "]"));
 
         // Put the amount of infected
         $col.find(".infected").text(count);
 
         // Write the percentage infected if any
         var percent = count/this.towns[town].size;
-        $col.find(".percent").text(percent? percentFormat(percent) : '');
+        $col.find(".percent").text(percentFormat(percent));
     }
 }
 
@@ -432,10 +561,16 @@ Visualizer.prototype.updateTable = function(){
 Visualizer.prototype.updateMap = function(){
     var currentDay = this.days[this.day];
 
-    for(town in this.towns){
-        val = currentDay[town] || 0;
-        dot = this.towns[town].dot;
-        dot.setAttribute("fill", this.gradient.get(val).toString());
-        dot.setAttribute("r", this.sizeFunc(val));
+    for(var town in this.towns){
+        var val = currentDay[town] || 0;
+        var size = this.towns[town].size;
+        var dot = this.towns[town].dot;
+
+        if(this.colourMode == "count")
+            dot.setAttribute("fill", this.countGradient.get(val).toString());
+        else if(this.colourMode == "percent")
+            dot.setAttribute("fill", this.percentGradient.get(val/size).toString());
+
+        // dot.setAttribute("r", this.sizeFunc(val));
     }
 }

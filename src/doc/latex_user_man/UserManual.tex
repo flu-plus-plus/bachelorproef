@@ -4,6 +4,7 @@
 %\usepackage[notincludeAppendices]{optional}
 %\usepackage[includeAppendices]{optional}
 %
+\usepackage{microtype}
 \usepackage{float}
 \floatstyle{ruled}
 \newfloat{float-verbatim}{thp}{lop}
@@ -20,7 +21,12 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \title{Stride project \\ \\ User Manual}
-\author{Willem L, Kuylen E \& Broeckhove J}
+\author{
+\begin{tabular}[t]{c} 
+	Willem L, Kuylen E, Broeckhove J, \\
+	Aerts S, De Haes C, Van der Cruysse J \& Van Hauwe L
+\end{tabular}
+}
 \submitdate{\today}
 \reportnumber{1.0}
 \bibfile{Refs}
@@ -35,6 +41,9 @@
 \input{01-Introduction}
 \input{02-Software}
 \input{03-Simulator}
+\input{04-Parallelization}
+\input{05-Visualizer}
+\input{06-Multiregion}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\input{99-Appendices}

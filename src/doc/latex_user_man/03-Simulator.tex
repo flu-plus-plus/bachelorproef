@@ -67,6 +67,16 @@ From the workspace directory, the simulator can be started with default configur
 
 \item \texttt{-r} or \texttt{{-}-r0}: To obtain the basic reproduction number, no tertiary infections.
 
+\item \texttt{-V} or \texttt{{-}-no-vis}: To prevent the simulator from producing visualization files.
+
+\item \texttt{-h} or \texttt{{-}-no-hdf5}: To run the simulator without checkpointing.
+
+\item \texttt{-f} or \texttt{{-}-h5file}: The checkpointing file. If not set it will load from the most recent HDF5 file, or write to a new file.
+
+\item \texttt{-l} or \texttt{{-}-load}: The date to be loaded from the HDF5 file. Format: \texttt{YYYYMMDD}. If not set the most recent date in the file is used.
+
+\item \texttt{-i} or \texttt{{-}-interval}: The number of days between checkpoints, not counting the first and last days. If not set it only checkpoints the first and last days.
+
 \end{compactitem}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
