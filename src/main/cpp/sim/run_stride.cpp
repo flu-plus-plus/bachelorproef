@@ -57,13 +57,6 @@ void StrideSimulatorResult::BeforeSimulatorStep(Simulator& sim)
 
 #if USE_HDF5
 	if (sim.GetConfiguration().common_config->use_checkpoint) {
-		if (load && day == 0) {
-			std::cout << "Loading old Simulation" << std::endl;
-			cp->OpenFile();
-			cp->LoadCheckPoint(date, sim);
-			cp->CloseFile();
-			std::cout << "Loaded old Simulation" << std::endl;
-		}
 		if (day == 0 && !load) {
 			// saves the start configuration
 			cp->OpenFile();
@@ -209,9 +202,21 @@ void run_stride(const MultiSimulationConfig& config)
 		    std::numeric_limits<size_t>::max());
 		file_logger->set_pattern("%v"); // Remove meta data from log => time-stamp of logging
 
+#if USE_HDF5
+		if (load) {
+			tasks.push_back(
+			    {log_name, sim_output_prefix, single_config,
+			     sim_manager.LoadSimulation(single_config, file_logger,cp,date ,region_id)});
+		} else {
+			tasks.push_back(
+			    {log_name, sim_output_prefix, single_config,
+			     sim_manager.CreateSimulation(single_config, file_logger, region_id)});
+		}
+#else
 		tasks.push_back(
 		    {log_name, sim_output_prefix, single_config,
 		     sim_manager.CreateSimulation(single_config, file_logger, region_id)});
+#endif
 	}
 	cout << "Done building simulators. " << endl << endl;
 

@@ -9,6 +9,10 @@
 #include <boost/property_tree/ptree.hpp>
 #include <spdlog/spdlog.h>
 
+#if USE_HDF5
+#include "checkpoint/CheckPoint.h"
+#endif
+
 namespace stride {
 
 class Population;
@@ -46,6 +50,14 @@ public:
 	    const SingleSimulationConfig& config, const boost::property_tree::ptree& pt_disease,
 	    const boost::property_tree::ptree& pt_contact, const std::shared_ptr<spdlog::logger>& log,
 	    unsigned int number_of_threads = 1U);
+
+#if USE_HDF5
+	/// Load simulator.
+	static std::shared_ptr<Simulator> Load(
+	    const SingleSimulationConfig& config, const std::shared_ptr<spdlog::logger>& log,
+	    const std::unique_ptr<checkpoint::CheckPoint>&, const boost::gregorian::date&,
+	    unsigned int num_threads = 1U);
+#endif
 
 private:
 	/// Initialize the clusters.
