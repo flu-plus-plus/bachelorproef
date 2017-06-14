@@ -377,36 +377,7 @@ void CheckPoint::LoadCheckPoint(boost::gregorian::date date, Simulator& sim)
 	H5Sget_simple_extent_dims(dspace, &dims, nullptr);
 
 	Population result;
-	std::vector<h_personType> datavec(dims);
-	H5Dread(dset, newType, H5S_ALL, H5S_ALL, H5P_DEFAULT, datavec.data());
-	for (auto& data : datavec) {
-		disease::Fate disease;
-		disease.start_infectiousness = data.StartInf;
-		disease.start_symptomatic = data.StartSympt;
-		disease.end_infectiousness = data.EndInf;
-		disease.end_symptomatic = data.EndSympt;
 
-		Person toAdd(
-		    data.ID, data.Age, data.Household, data.School, data.Work, data.Primary, data.Secondary, disease);
-
-		if (data.Participating) {
-			toAdd.ParticipateInSurvey();
-		}
-
-		if (data.Immune) {
-			toAdd.GetHealth().SetImmune();
-		}
-		if (data.Infected) {
-			toAdd.GetHealth().StartInfection();
-		}
-		for (unsigned int i = 0; i < data.TimeInfected; i++) {
-			toAdd.GetHealth().Update();
-		}
-
-		result.emplace(toAdd);
-	}
-
-	/*
 	for (hsize_t i = 0; i < dims; i++) {
 		hsize_t start = i;
 
@@ -446,7 +417,6 @@ void CheckPoint::LoadCheckPoint(boost::gregorian::date date, Simulator& sim)
 		result.emplace(toAdd);
 		H5Sclose(subspace);
 	}
-	*/
 
 	H5Sclose(dspace);
 	H5Tclose(newType);
@@ -495,13 +465,6 @@ void CheckPoint::LoadCluster(
 
 	std::unique_ptr<Cluster> CurrentCluster = std::make_unique<Cluster>(data.ID, i);
 
-	std::vector<Person> thisCluster;
-	result.serial_for([this, &data, &thisCluster, &i](const Person& p, unsigned int) {
-		if (p.GetClusterId(i) == data.ID) {
-			thisCluster.push_back(p);
-		}
-	});
-
 	for (hsize_t j = 1; j < dims; j++) {
 		hsize_t start = j;
 		hsize_t count = 1;
@@ -519,22 +482,12 @@ void CheckPoint::LoadCluster(
 		if (data.ID != CurrentCluster->GetId()) {
 			clusters.emplace_back(*CurrentCluster);
 			CurrentCluster = std::make_unique<Cluster>(data.ID, i);
-			thisCluster.clear();
-			result.serial_for([this, &data, &thisCluster, &i](const Person& p, unsigned int) {
-				if (p.GetClusterId(i) == data.ID) {
-					thisCluster.push_back(p);
-				}
-			});
 			continue;
 		}
 
 		unsigned int idPersonToAdd = data.PersonID;
 
-		for(auto p: thisCluster){
-			if(p.GetId() == idPersonToAdd) {
-				CurrentCluster->AddPerson(p);
-			}
-		}
+		CurrentCluster->AddPerson(result.getPerson(idPersonToAdd));
 	}
 
 	clusters.emplace_back(*CurrentCluster);

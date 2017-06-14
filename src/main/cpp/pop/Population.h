@@ -94,6 +94,13 @@ public:
 		return result;
 	}
 
+	/// Gets the person with the given id in this population.
+	Person getPerson(PersonId id) const
+	{
+		Person result(id, people.find(id)->second);
+		return result;
+	}
+
 	/// Gets the number of people in this population.
 	auto size() const -> decltype(people.size()) { return people.size(); }
 
