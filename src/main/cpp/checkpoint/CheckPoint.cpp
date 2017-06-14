@@ -377,6 +377,36 @@ void CheckPoint::LoadCheckPoint(boost::gregorian::date date, Simulator& sim)
 	H5Sget_simple_extent_dims(dspace, &dims, nullptr);
 
 	Population result;
+	std::vector<h_personType> datavec(dims);
+	H5Dread(dset, newType, H5S_ALL, H5S_ALL, H5P_DEFAULT, datavec.data());
+	for (auto& data : datavec) {
+		disease::Fate disease;
+		disease.start_infectiousness = data.StartInf;
+		disease.start_symptomatic = data.StartSympt;
+		disease.end_infectiousness = data.EndInf;
+		disease.end_symptomatic = data.EndSympt;
+
+		Person toAdd(
+		    data.ID, data.Age, data.Household, data.School, data.Work, data.Primary, data.Secondary, disease);
+
+		if (data.Participating) {
+			toAdd.ParticipateInSurvey();
+		}
+
+		if (data.Immune) {
+			toAdd.GetHealth().SetImmune();
+		}
+		if (data.Infected) {
+			toAdd.GetHealth().StartInfection();
+		}
+		for (unsigned int i = 0; i < data.TimeInfected; i++) {
+			toAdd.GetHealth().Update();
+		}
+
+		result.emplace(toAdd);
+	}
+
+	/*
 	for (hsize_t i = 0; i < dims; i++) {
 		hsize_t start = i;
 
@@ -416,6 +446,7 @@ void CheckPoint::LoadCheckPoint(boost::gregorian::date date, Simulator& sim)
 		result.emplace(toAdd);
 		H5Sclose(subspace);
 	}
+	*/
 
 	H5Sclose(dspace);
 	H5Tclose(newType);
@@ -455,6 +486,7 @@ void CheckPoint::LoadCluster(
 
 	hid_t subspace = H5Dget_space(clusterID);
 	H5Sselect_hyperslab(subspace, H5S_SELECT_SET, &start, nullptr, &count, nullptr);
+
 	h_clusterType data;
 
 	H5Dread(clusterID, newType, H5S_ALL, subspace, H5P_DEFAULT, &data);
@@ -462,6 +494,13 @@ void CheckPoint::LoadCluster(
 	H5Sclose(subspace);
 
 	std::unique_ptr<Cluster> CurrentCluster = std::make_unique<Cluster>(data.ID, i);
+
+	std::vector<Person> thisCluster;
+	result.serial_for([this, &data, &thisCluster, &i](const Person& p, unsigned int) {
+		if (p.GetClusterId(i) == data.ID) {
+			thisCluster.push_back(p);
+		}
+	});
 
 	for (hsize_t j = 1; j < dims; j++) {
 		hsize_t start = j;
@@ -480,16 +519,22 @@ void CheckPoint::LoadCluster(
 		if (data.ID != CurrentCluster->GetId()) {
 			clusters.emplace_back(*CurrentCluster);
 			CurrentCluster = std::make_unique<Cluster>(data.ID, i);
+			thisCluster.clear();
+			result.serial_for([this, &data, &thisCluster, &i](const Person& p, unsigned int) {
+				if (p.GetClusterId(i) == data.ID) {
+					thisCluster.push_back(p);
+				}
+			});
 			continue;
 		}
 
 		unsigned int idPersonToAdd = data.PersonID;
 
-		result.serial_for([this, &idPersonToAdd, &CurrentCluster](const Person& p, unsigned int) {
-			if (p.GetId() == idPersonToAdd) {
+		for(auto p: thisCluster){
+			if(p.GetId() == idPersonToAdd) {
 				CurrentCluster->AddPerson(p);
 			}
-		});
+		}
 	}
 
 	clusters.emplace_back(*CurrentCluster);
@@ -1024,9 +1069,9 @@ void CheckPoint::LoadTowns(Population& pop)
 	H5Dclose(dset);
 	H5Tclose(newType);
 	Atlas::TownMap map;
-	for (auto& i: data) {
+	for (auto& i : data) {
 		geo::GeoPosition position;
-		Atlas::Town town = Atlas::Town("",0);
+		Atlas::Town town = Atlas::Town("", 0);
 		position.latitude = i.latitude;
 		position.longitude = i.longitude;
 
@@ -1034,7 +1079,7 @@ void CheckPoint::LoadTowns(Population& pop)
 		town.size = i.size;
 		town.name = std::string(i.name);
 
-		map.emplace(position,town);
+		map.emplace(position, town);
 	}
 
 	pop.AtlasRegisterTowns(map);
