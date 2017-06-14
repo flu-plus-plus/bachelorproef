@@ -206,7 +206,7 @@ void run_stride(const MultiSimulationConfig& config)
 		if (load) {
 			tasks.push_back(
 			    {log_name, sim_output_prefix, single_config,
-			     sim_manager.LoadSimulation(single_config, file_logger,cp,date ,region_id)});
+			     sim_manager.LoadSimulation(single_config, file_logger, cp, date, region_id)});
 		} else {
 			tasks.push_back(
 			    {log_name, sim_output_prefix, single_config,
