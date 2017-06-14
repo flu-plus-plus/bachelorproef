@@ -44,21 +44,23 @@ OpenMP, TBB and our custom implementation based on standard library threads are 
 
 Figure \ref{fig:parallelization-mean-runtimes} shows the mean run-times of the \texttt{run\_popgen\_small.xml}, \texttt{run\_popgen\_medium.xml} and \texttt{run\_popgen\_large.xml} configurations for each parallelization library. These configurations generate a population and then run the simulator on the generated population for one hundred days. They are identical in every way except for the size of the population that is generated.
 
-Each configuration was run ten times per parallelization library. Mean run-times are represented in figure \ref{fig:parallelization-mean-runtimes}. The relative standard deviation for each cell in the table is less than four percent. The measurements were produced by an Intel Core i7-6700K CPU running Ubuntu 17.04, gcc 6.3.0 and TBB 4.4.
+Each configuration was run ten times per parallelization library. Only the wall-clock time of the simulation itself was measured; population generation times were excluded because population generation is not parallelized---including it would unfairly slant the results in favor of the no-parallelization implementation.
+
+Mean run-times are represented in figure \ref{fig:parallelization-mean-runtimes}. The relative standard deviation for each cell in the table is less than five percent. The measurements were produced by an Intel Core i7-6700K CPU running Ubuntu 17.04, gcc 6.3.0 and TBB 4.4.
 
 \begin{figure}[h]
 	\begin{tabular}{r|r|r|r|r}
 		\textbf{Population size} & \textbf{OpenMP} & \textbf{TBB} & \textbf{STL} & \textbf{none} \\
-		100,000 & 6.00s & 6.09s & 5.80s & 6.69s \\
-		500,000 & 53.01s & 53.34s & 52.08s & 57.97s \\
-		1,000,000 & 169.69s & 166.81s & 167.91s & 178.97s
+		100,000 & 6.59s & 8.17s & 7.31s & 8.41s \\
+		500,000 & 34.53s & 42.92s & 38.12s & 45.75s \\
+		1,000,000 & 71.32s & 83.42s & 77.94s & 95.40s
 	\end{tabular}
 	\label{fig:parallelization-mean-runtimes}
-	\caption{Mean run-times for each parallelization library.}
+	\caption{Mean run-times for each parallelization library}
 \end{figure}
 
 What stands out from this table is that our standard library threads--based implementation is competitive with OpenMP and TBB performance-wise, despite using a na\"ive static partitioning scheme.
 
 This can likely be attributed to the homogeneity of the workloads that are parallelized: at the time of writing, parallelization functions are used in such a way that arbitrarily chosen but equally-sized chunks of items to process take roughly the same amount of time to process.
 
-OpenMP and TBB have much more intelligent schedulers than our simple standard library threads--based implementation, but it's hard for them to outperform our simple static scheduler because its behavior is optimal for homogeneous workloads, which the workloads offered by Stride approximate well.
+OpenMP and TBB have much more intelligent schedulers than our simple standard library threads--based implementation, but it's hard for them to outperform our simple static scheduler because its behavior is optimal for homogeneous workloads, which the workloads offered by Stride approximate well. As a matter of fact, our simple STL implementation outperforms the TBB implementation on all workloads and is second only to the OpenMP implementation performance-wise.

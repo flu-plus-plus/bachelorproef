@@ -223,7 +223,9 @@ void run_stride(const MultiSimulationConfig& config)
 	// -----------------------------------------------------------------------------------------
 	// Run the simulation.
 	// -----------------------------------------------------------------------------------------
+	Stopwatch<> sim_clock("sim_clock", true);
 	sim_manager.WaitAll();
+	sim_clock.Stop();
 
 	// Generate output files for the simulations.
 	for (const auto& sim_tuple : tasks) {
@@ -256,9 +258,7 @@ void run_stride(const MultiSimulationConfig& config)
 			vis_file.Print(pop->GetAtlas().getTownMap(), sim_result.visualizer_data);
 		}
 
-		cout << endl << endl;
-		cout << "  run_time: " << sim_result.GetRuntimeString() << "  -- total time: " << total_clock.ToString()
-		     << endl
+		cout << "simulator #" << sim_result.id << " is done; simulation time: " << sim_result.GetRuntimeString()
 		     << endl;
 
 		spdlog::drop(sim_tuple.log_name);
@@ -267,7 +267,11 @@ void run_stride(const MultiSimulationConfig& config)
 	// -----------------------------------------------------------------------------------------
 	// Print final message to command line.
 	// -----------------------------------------------------------------------------------------
-	cout << "Exiting at:         " << TimeStamp().ToString() << endl << endl;
+	cout << endl << endl;
+	cout << "total time: " << total_clock.ToString() << endl
+	     << "total simulation time: " << sim_clock.ToString() << endl
+	     << "Exiting at: " << TimeStamp().ToString() << endl
+	     << endl;
 }
 
 /// Run the stride simulator.
