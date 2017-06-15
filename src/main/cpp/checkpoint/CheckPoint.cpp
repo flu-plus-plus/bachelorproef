@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 using namespace std;
 
@@ -214,15 +215,22 @@ void CheckPoint::WriteFileDSet(const std::string& filename, const std::string& s
 	std::vector<char> dataset{std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>()};
 
 	hid_t group = H5Gopen2(m_file, "Config", H5P_DEFAULT);
-	hsize_t dims[1] = {dataset.size()};
-	hid_t dataspace = H5Screate_simple(1, dims, nullptr);
-	hid_t dset =
-	    H5Dcreate2(group, setname.c_str(), H5T_NATIVE_CHAR, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	hid_t dset;
+	if (H5Lexists(group, setname.c_str(), H5P_DEFAULT) <= 0) {
+		hsize_t dims[1] = {dataset.size()};
+		hid_t dataspace = H5Screate_simple(1, dims, nullptr);
+		dset = H5Dcreate2(
+		    group, setname.c_str(), H5T_NATIVE_CHAR, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+		H5Sclose(dataspace);
+	} else {
+		dset = H5Dopen2(group, setname.c_str(), H5P_DEFAULT);
+	}
 	H5Dwrite(dset, H5T_NATIVE_CHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataset.data());
-	H5Sclose(dataspace);
-
+	if (H5Aexists(dset, "extension") > 0) {
+		H5Adelete(dset, "extension");
+	}
 	hsize_t attrDims = extension.size();
-	dataspace = H5Screate_simple(1, &attrDims, nullptr);
+	hid_t dataspace = H5Screate_simple(1, &attrDims, nullptr);
 	hid_t attr = H5Acreate2(dset, "extension", H5T_NATIVE_CHAR, dataspace, H5P_DEFAULT, H5P_DEFAULT);
 	H5Awrite(attr, H5T_NATIVE_CHAR, extension.c_str());
 	H5Aclose(attr);
@@ -1061,5 +1069,292 @@ boost::gregorian::date CheckPoint::GetLastDate()
 	return result;
 }
 
+void CheckPoint::LoadDisease(const std::string& filename) { LoadFile(filename, "Config/disease"); }
+
+void CheckPoint::StoreDisease(const std::string& filename)
+{
+	// Make the disease to see if it is valid
+	try {
+
+		boost::property_tree::ptree pt_disease;
+		util::InstallDirs::ReadXmlFile(filename, util::InstallDirs::GetCurrentDir(), pt_disease);
+		SingleSimulationConfig temp;
+		temp.common_config = std::make_shared<CommonSimulationConfig>();
+		temp.common_config->r0 = 0;
+		DiseaseProfile disease;
+		disease.Initialize(temp, pt_disease);
+
+	} catch (std::exception& e) {
+		std::cout << e.what() << std::endl;
+		FATAL_ERROR("INVALID DISEASE FILE");
+	}
+	StoreFile(filename, "disease");
+}
+
+void CheckPoint::LoadMatrix(const std::string& filename) { LoadFile(filename, "Config/contact"); }
+
+void CheckPoint::StoreMatrix(const std::string& filename)
+{
+	// Make the matrix to see if it is valid
+	try {
+		boost::property_tree::ptree pt_contact;
+		util::InstallDirs::ReadXmlFile(filename, util::InstallDirs::GetCurrentDir(), pt_contact);
+		ContactProfile(ClusterType::Household, pt_contact);
+		ContactProfile(ClusterType::School, pt_contact);
+		ContactProfile(ClusterType::Work, pt_contact);
+		ContactProfile(ClusterType::PrimaryCommunity, pt_contact);
+		ContactProfile(ClusterType::SecondaryCommunity, pt_contact);
+	} catch (std::exception& e) {
+		FATAL_ERROR("INVALID CONTACT MATRIX");
+	}
+	StoreFile(filename, "contact");
+}
+
+void CheckPoint::LoadConfig(const std::string& filename)
+{
+	boost::property_tree::ptree pt_config;
+
+	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
+	if (exist <= 0) {
+		FATAL_ERROR("Invalid file");
+	}
+
+	hid_t group = H5Gopen2(m_file, "Config", H5P_DEFAULT);
+
+	hid_t attr = H5Aopen(group, "bools", H5P_DEFAULT);
+	hbool_t bools[3];
+	H5Aread(attr, H5T_NATIVE_HBOOL, bools);
+	H5Aclose(attr);
+
+	pt_config.put("TrackIndexCase", bools[0]);
+
+	attr = H5Aopen(group, "doubles", H5P_DEFAULT);
+	double doubles[3];
+	H5Aread(attr, H5T_NATIVE_DOUBLE, doubles);
+	H5Aclose(attr);
+
+	pt_config.put("R0", doubles[0]);
+
+	attr = H5Aopen(group, "uints", H5P_DEFAULT);
+	unsigned int uints[6];
+	H5Aread(attr, H5T_NATIVE_UINT, uints);
+	H5Aclose(attr);
+
+	pt_config.put("RngSeed", uints[0]);
+	pt_config.put("Days", uints[1]);
+	pt_config.put("LogMode", uints[3]);
+
+	attr = H5Aopen(group, "prefix", H5P_DEFAULT);
+
+	std::unique_ptr<H5A_info_t> info = std::make_unique<H5A_info_t>();
+
+	H5Aget_info(attr, info.get());
+	std::vector<char> prefix(info->data_size, '\0');
+	H5Aread(attr, H5T_NATIVE_CHAR, prefix.data());
+	H5Aclose(attr);
+
+	if (info->data_size == 0) {
+		pt_config.put("Prefix", "");
+	} else 
+	{
+		pt_config.put("Prefix",std::string(prefix.begin(), prefix.end()));
+	}
+
+	std::ofstream f(filename);
+	boost::property_tree::write_json(f, pt_config);
+}
+
+void CheckPoint::StoreConfig(const std::string& filename) {
+	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
+	if (exist <= 0) {
+		FATAL_ERROR("Invalid file");
+	}
+
+	boost::property_tree::ptree pt_config;
+	boost::property_tree::read_json(filename, pt_config);
+
+	bool indexCase = pt_config.get<bool>("TrackIndexCase");
+	double r0 = pt_config.get<double>("R0");
+	unsigned int seed = pt_config.get<unsigned int>("RngSeed");
+	unsigned int days = pt_config.get<unsigned int>("Days");
+	unsigned int LogMode = pt_config.get<unsigned int>("LogMode");
+	std::string prefix = pt_config.get<std::string>("Prefix");
+
+	hid_t group = H5Gopen2(m_file, "Config", H5P_DEFAULT);
+
+	hid_t attr = H5Aopen(group, "bools", H5P_DEFAULT);
+	hbool_t bools[3];
+	H5Aread(attr, H5T_NATIVE_HBOOL, bools);
+	H5Aclose(attr);
+
+	bools[0] = indexCase;
+
+	attr = H5Aopen(group, "doubles", H5P_DEFAULT);
+	double doubles[3];
+	H5Aread(attr, H5T_NATIVE_DOUBLE, doubles);
+	H5Aclose(attr);
+
+	doubles[0] = r0;
+
+	attr = H5Aopen(group, "uints", H5P_DEFAULT);
+	unsigned int uints[6];
+	H5Aread(attr, H5T_NATIVE_UINT, uints);
+	H5Aclose(attr);
+
+	uints[0] = seed;
+	uints[1] = days;
+	uints[3] = LogMode;
+
+	H5Adelete(group,"bools");
+	H5Adelete(group,"uints");
+	H5Adelete(group,"doubles");
+	H5Adelete(group,"prefix");
+
+	hsize_t dims = 3;
+	hid_t dataspace = H5Screate_simple(1, &dims, nullptr);
+	attr = H5Acreate2(group, "bools", H5T_NATIVE_HBOOL, dataspace, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_NATIVE_HBOOL, bools);
+	H5Sclose(dataspace);
+	H5Aclose(attr);
+
+	dims = 6;
+	dataspace = H5Screate_simple(1, &dims, nullptr);
+	attr = H5Acreate2(group, "uints", H5T_NATIVE_UINT, dataspace, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_NATIVE_UINT, uints);
+	H5Sclose(dataspace);
+	H5Aclose(attr);
+
+	dims = 3;
+	dataspace = H5Screate_simple(1, &dims, nullptr);
+	attr = H5Acreate2(group, "doubles", H5T_NATIVE_DOUBLE, dataspace, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_NATIVE_DOUBLE, doubles);
+	H5Sclose(dataspace);
+	H5Aclose(attr);
+
+	dims = prefix.size();
+	dataspace = H5Screate_simple(1, &dims, nullptr);
+	attr = H5Acreate2(group, "prefix", H5T_NATIVE_CHAR, dataspace, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_NATIVE_CHAR, prefix.c_str());
+	H5Sclose(dataspace);
+	H5Aclose(attr);
+}
+
+void CheckPoint::LoadFile(const std::string& filestr, const std::string& setname)
+{
+	htri_t exist = H5Lexists(m_file, setname.c_str(), H5P_DEFAULT);
+	if (exist <= 0) {
+		FATAL_ERROR("Invalid file");
+	}
+	boost::filesystem::path filename(filestr);
+	/*
+	Piece of code based on code on
+	https://lists.hdfgroup.org/pipermail/hdf-forum_lists.hdfgroup.org/2010-June/003208.html
+	*/
+	std::vector<char> data;
+	hid_t did;
+	herr_t err = 0;
+	hid_t spaceId;
+	hid_t dataType = H5T_NATIVE_CHAR;
+
+	// std::cout << "HDF5 Data Type: " <<	H5Lite::HDFTypeForPrimitiveAsStr(test) << std::endl;
+	/* Open the dataset. */
+	// std::cout << "  Opening " << dsetName << " for data Retrieval.  "<< std::endl;
+	did = H5Dopen(m_file, setname.c_str(), H5P_DEFAULT);
+
+	if (did < 0) {
+		std::cout << " Error opening Dataset: " << did << std::endl;
+		return;
+	}
+
+	std::string extension;
+	hid_t attr = H5Aopen(did, "extension", H5P_DEFAULT);
+
+	std::unique_ptr<H5A_info_t> info = std::make_unique<H5A_info_t>();
+
+	H5Aget_info(attr, info.get());
+	std::vector<char> extensionVector(info->data_size, '\0');
+	H5Aread(attr, H5T_NATIVE_CHAR, extensionVector.data());
+	H5Aclose(attr);
+
+	extension = std::string(extensionVector.begin(), extensionVector.end());
+
+	filename.replace_extension(extension);
+
+	std::ofstream out(filename.string(), std::ios::out | std::ios::trunc);
+	if (did >= 0) {
+		spaceId = H5Dget_space(did);
+		if (spaceId > 0) {
+			int32_t rank = H5Sget_simple_extent_ndims(spaceId);
+			if (rank > 0) {
+				std::vector<hsize_t> dims;
+				dims.resize(rank); // Allocate enough room for the dims
+				rank = H5Sget_simple_extent_dims(spaceId, &(dims.front()), NULL);
+				hsize_t numElements = 1;
+				for (std::vector<hsize_t>::iterator iter = dims.begin(); iter < dims.end(); ++iter) {
+					numElements = numElements * (*iter);
+				}
+				// std::cout << "NumElements: " << numElements << std::endl;
+				// Resize the vector
+				data.resize(static_cast<int>(numElements));
+				// for (uint32_t i = 0; i<numElements; ++i) { data[i] = 55555555;}
+				err = H5Dread(did, dataType, H5S_ALL, H5S_ALL, H5P_DEFAULT, &(data.front()));
+				if (err < 0) {
+					std::cout << "Error Reading Data." << std::endl;
+				}
+			}
+			err = H5Sclose(spaceId);
+			if (err < 0) {
+				std::cout << "Error Closing Data Space" << std::endl;
+			}
+		} else {
+			std::cout << "Error Opening SpaceID" << std::endl;
+		}
+		err = H5Dclose(did);
+		if (err < 0) {
+			std::cout << "Error Closing Dataset" << std::endl;
+		}
+		for (auto& c : data) {
+			out << c;
+		}
+	}
+	return;
+}
+
+void CheckPoint::StoreFile(const std::string& filename, const std::string& setname)
+{
+	boost::filesystem::path filep(filename);
+	if (!is_regular_file(filep)) {
+		FATAL_ERROR("Unable to find file: " + filep.string());
+	}
+	std::string extension = filep.extension().string();
+	std::ifstream f(filep.string());
+
+	std::vector<char> dataset{std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>()};
+
+	hid_t group = H5Gopen2(m_file, "Config", H5P_DEFAULT);
+	hid_t dset;
+	if (H5Lexists(group, setname.c_str(), H5P_DEFAULT) <= 0) {
+		hsize_t dims[1] = {dataset.size()};
+		hid_t dataspace = H5Screate_simple(1, dims, nullptr);
+		dset = H5Dcreate2(
+		    group, setname.c_str(), H5T_NATIVE_CHAR, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+		H5Sclose(dataspace);
+	} else {
+		dset = H5Dopen2(group, setname.c_str(), H5P_DEFAULT);
+	}
+	H5Dwrite(dset, H5T_NATIVE_CHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataset.data());
+	if (H5Aexists(dset, "extension") > 0) {
+		H5Adelete(dset, "extension");
+	}
+	hsize_t attrDims = extension.size();
+	hid_t dataspace = H5Screate_simple(1, &attrDims, nullptr);
+	hid_t attr = H5Acreate2(dset, "extension", H5T_NATIVE_CHAR, dataspace, H5P_DEFAULT, H5P_DEFAULT);
+	H5Awrite(attr, H5T_NATIVE_CHAR, extension.c_str());
+	H5Aclose(attr);
+
+	H5Dclose(dset);
+	H5Sclose(dataspace);
+	H5Gclose(group);
+}
 } /* namespace checkpoint */
 } /* namespace stride */

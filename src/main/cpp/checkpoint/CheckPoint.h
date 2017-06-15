@@ -62,6 +62,24 @@ public:
 	/// Writes the Atlas
 	void WriteAtlas(const Atlas&);
 
+	/// Loads the disease in the given file
+	void LoadDisease(const std::string&);
+
+	/// Stores the disease from the given file into the checkpoint
+	void StoreDisease(const std::string&);
+
+	/// Loads the contact matrix in the given file
+	void LoadMatrix(const std::string&);
+
+	/// Stores the contact matrix from the given file into the checkpoint
+	void StoreMatrix(const std::string&);
+
+	/// Loads the changable config values in json-format in the file with given name.
+	void LoadConfig(const std::string&);
+
+	/// Stores the changable config values from the given file.
+	void StoreConfig(const std::string&);
+
 private:
 	/// Writes the current population to a checkpoint.
 	void WritePopulation(const Population&, boost::gregorian::date);
@@ -97,6 +115,14 @@ private:
 	/// Writes a dataset to a file. The first string is the filename in the data folder. The second string is the
 	/// name of the dataset
 	std::string WriteDSetFile(const std::string&, const std::string&);
+
+	/// This loads the data in the file in the first string in the dataset with the name of the second string
+	/// This looks like WriteDSetFile, but does not load it in the datafolder.
+	void LoadFile(const std::string&, const std::string&);
+
+	/// This stores the data in the file in the first string in the dataset with the name of the second string
+	/// This looks like WriteFileDSet, but the file is not neccesarily in the datafolder.
+	void StoreFile(const std::string&, const std::string&);
 
 	/// Writes the towns from the Atlas
 	void WriteTowns(const Atlas&);
@@ -174,7 +200,7 @@ private:
 	};
 
 	struct h_town
-	{	
+	{
 		double latitude;
 		double longitude;
 		unsigned int size;

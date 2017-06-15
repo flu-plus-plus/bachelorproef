@@ -75,6 +75,16 @@ target_link_libraries(stride ${LIBS})
 #set_target_properties(stride PROPERTIES LINK_FLAGS_RELEASE "-flto")
 install(TARGETS stride  DESTINATION   ${BIN_INSTALL_LOCATION})
 
+if( HDF5_FOUND AND NOT STRIDE_FORCE_NO_HDF5 )
+    set(MAINCP_SRC
+        checkpoint/main.cpp
+    )
+    add_executable(stridecp ${MAINCP_SRC} $<TARGET_OBJECTS:libstride> $<TARGET_OBJECTS:trng>)
+    target_link_libraries(stridecp ${LIBS})
+    install(TARGETS stridecp DESTINATION ${BIN_INSTALL_LOCATION})
+    unset(MAINCP_SRC)
+endif()
+
 #============================================================================
 # Clean up.
 #============================================================================
