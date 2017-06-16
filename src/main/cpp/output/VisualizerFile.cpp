@@ -20,28 +20,16 @@ VisualizerFile::~VisualizerFile() { m_fstream.close(); }
 
 void VisualizerFile::Initialize(const std::string& file) { m_fstream.open((file + "_vis.json").c_str()); }
 
-void VisualizerFile::Print(const Atlas::TownMap& townMap, const VisualizerData& visualizer_data)
+void VisualizerFile::Print(VisualizerData& visualizer_data)
 {
 	using boost::property_tree::ptree;
 	using boost::property_tree::write_json;
 
-	ptree townsTree;
-
-	for (auto& p : townMap) {
-		// append a town node for each town in the map:
-		// id : {name, size, latitude, longitude}
-		ptree townNode;
-		townNode.put("name", p.second.name);
-		townNode.put("size", p.second.size);
-		townNode.put("lat", p.first.latitude);
-		townNode.put("long", p.first.longitude);
-		townsTree.add_child(to_string(p.second.id), townNode);
-	}
-
-	std::shared_ptr<ptree> daysTree = visualizer_data.ToPtree();
+	std::shared_ptr<ptree> townsTree = visualizer_data.GetTownsTree();
+	std::shared_ptr<ptree> daysTree = visualizer_data.GetDaysTree();
 
 	ptree fileTree;
-	fileTree.add_child("towns", townsTree);
+	fileTree.add_child("towns", *townsTree);
 	fileTree.add_child("days", *daysTree);
 
 	write_json(m_fstream, fileTree, false);

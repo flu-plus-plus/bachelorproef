@@ -4,25 +4,62 @@
 
 
 \section{Visualization files}
+\label{sec:files}
 
-Visualization files (\texttt{*\_vis.json}) are only produced by the simulator when working with a population generated from a geographical distribution, as otherwise there's no data to determine the locations of clusters on a map.
+Visualization files (\texttt{*\_vis.json}) are only able to be produced by the simulator when working with a population generated from a geographical distribution, as otherwise there's no data to determine the locations of clusters on a map. Generation of visualization files is also prevented with use of the \texttt{-V} or \texttt{{-}-no-vis} flag.
+
+The simulator will add new data to the visualization file with every 10th simulated day. This means the file can be used to visualize simulation results even before the simulator finishes running. To help with this, once the file has been specified to the visualizer, it will automatically load the latest data from the file in the case it is updated.
+
+\subsection{Format}
+
+The visualization file employs the following json format:
+
+The root of the file is an Object with two fields:
+\begin{compactitem}	
+	\item \texttt{towns}: An array of town Objects, each with four fields:
+	\begin{compactitem}	
+		\item \texttt{name}: The town's name.
+		\item \texttt{size}: The town's number of inhabitants.
+		\item \texttt{lat}: The town's latitude.
+		\item \texttt{long}: The town's longitude.
+	\end{compactitem}
+	\pagebreak
+	
+	\item \texttt{days}: An array of various Objects:\\
+	\texttt{days[0]}: An Object with multiple fields:
+	\begin{compactitem}				
+		\item \texttt{\$townId} : The number of infected in \texttt{towns[\$townId]} on the first day.\\
+		If a specific \texttt{\$townId} field is not present, its value is assumed to be 0.
+	\end{compactitem}
+	\texttt{days[n]} for $n > 0$: An Object with multiple fields:
+	\begin{compactitem}				
+		\item \texttt{\$townId} : The difference in number of infected in \texttt{towns[\$townId]} between the n\textsuperscript{th} day and the previous day.\\
+		If a specific \texttt{\$townId} field is not present, its value is assumed to be 0.
+	\end{compactitem}
+	
+	\vspace{4pt}
+	If a certain day contains no entries its place may instead hold an empty string.
+\end{compactitem}
+
+All values are allowed to be 
 
 \section{The Visualizer}
 
-\begin{figure}[t]
+\begin{figure}[!b]
 	\centering
 	\includegraphics[width=\textwidth]{images/visualizer.png}
-	\caption{A visualization showing the map view and all panels.}
+	\caption{A visualization showing the map view and all types of panels.}
 \end{figure}
 
-The visualizer is a JavaScript-based browser application. It is included in the Stride distribution in \texttt{src/main/resources/html/main.html}, or it can be accessed from \url{https://flu-plus-plus.github.io/visualizer/main.html}.
+The visualizer is a JavaScript-based browser application. It is included in the Stride distribution in \texttt{src/main/resources/html/index.html}, or it can be accessed from \url{https://flu-plus-plus.github.io/visualizer/}.
 
 
 \subsection{Loading a file}
 
-To load a visualization file simply click the "Select file" button on the control panel. Selecting a file automatically analyses the data and starts the visualization.
+To load a visualization file simply click the "Select file" button on the control panel. Selecting a file automatically analyses the data and starts the visualization. This also sets the the visualizer to monitor changes made to the file (see \ref{sec:files}).
 
 \subsection{Controlling time}
+\label{sub:control}
 
 On the control panel, use the left and right buttons to step through the timeline one day at a time, or use the slider for greater control over the currently visualized day.
 
@@ -45,6 +82,7 @@ Each location is represented by a circle on the map with several attributes:
 \end{compactitem}
 
 \subsection{The legend panel}
+\label{sub:legend}
 
 The legend panel shows and controls the map's colour coding.
 
@@ -76,15 +114,16 @@ The columns are as follows:
 
 \subsection{The panels}
 
-Panels can be moved, minimized, and some can even be deleted.
+Panels can be moved, minimized, and some can be deleted.
 
-The control panel and legend panel have already been discussed.
+The control panel and legend panel have already been discussed (see \ref{sub:control} and \ref{sub:legend}).
 
 \subsubsection{General stats panel}
 This panel holds information that is constant for the entire file.
 \begin{compactitem}	
 	\item \textbf{Total days:} The total number of logged days.
 	\item \textbf{Total people:} The total number of inhabitants across all locations.
+	\item \textbf{Total towns:} The total number of different locations.
 	\item \textbf{Most infected:} The highest total number of infected of all time, and the day on which it happened. Clicking the day will automatically set the timeline to that day.
 \end{compactitem}
 
@@ -98,7 +137,7 @@ This panel holds information that changes between days.
 \end{compactitem}
 
 \subsubsection{Total infected over time panel}
-This panel shows a graph representing the combined percentage of infected over the entire logged length of time.
+This panel shows a graph representing the total percentage of infected over time. The red line highlights the currently visualized day.
 
 \subsubsection{Location specific panels}
 These panels show data specific to a given location.

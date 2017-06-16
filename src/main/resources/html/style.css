@@ -62,21 +62,21 @@ body{
 
     .general-info.panel{
         z-index: 9;
-        top: 190px;
+        top: 180px;
         left: 30px;
         width: 250px;
     }
 
     .daily-info.panel{
         z-index: 8;
-        top: 320px;
+        top: 330px;
         left: 30px;
         width: 250px;
     }
 
     .graph.panel{
         z-index: 6;
-        top: 450px;
+        top: 460px;
         left: 30px;
         min-width: 150px;
     }
@@ -215,3 +215,26 @@ circle{
         r: 12px;
         cursor: pointer;
     }
+
+.graph-view .indicator-wrapper {
+    width: 254;
+    height: 135;
+    left: 52;
+    top: 65;
+    position: absolute;
+}
+
+.town-graph .indicator-wrapper {
+    width: 175;
+    height: 90;
+    left: 52;
+    top: 98;
+    position: absolute;
+}
+
+.indicator-wrapper > .indicator {
+    height: 100%;
+    border-left: 2px solid rgba(255, 0, 120, 0.5);
+    width: 2px;
+    position: relative;
+}

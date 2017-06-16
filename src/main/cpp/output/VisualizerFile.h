@@ -27,7 +27,7 @@ public:
 	~VisualizerFile();
 
 	/// Print the given visualisation data.
-	void Print(const Atlas::TownMap& townMap, const VisualizerData& visualizer_data);
+	void Print(VisualizerData& visualizer_data);
 
 private:
 	/// Generate file name and open the file stream.
