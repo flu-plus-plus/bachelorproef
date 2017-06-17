@@ -522,7 +522,7 @@ MultiSimulationConfig CheckPoint::LoadMultiConfig()
 		result.region_models.push_back(singleresult.travel_model);
 	} else {
 		while (exist > 0) {
-			m_file = H5Gopen2(origF, groupstr.c_str(),H5P_DEFAULT);
+			m_file = H5Gopen2(origF, groupstr.c_str(), H5P_DEFAULT);
 			SingleSimulationConfig singleresult = LoadSingleConfig();
 			H5Gclose(m_file);
 			result.common_config = singleresult.common_config;
@@ -1031,6 +1031,10 @@ void CheckPoint::LoadAtlas(Population& pop)
 	H5Dclose(dset);
 	H5Tclose(newType);
 
+	if (data.empty()) {
+		pop.has_atlas = false;
+	}
+
 	for (auto& c : data) {
 		Atlas::ClusterKey key(c.ClusterID, (ClusterType)c.ClusterType);
 		geo::GeoPosition postion;
@@ -1102,16 +1106,29 @@ boost::gregorian::date CheckPoint::GetLastDate()
 	htri_t exist = H5Lexists(m_file, "Simulation 0", H5P_DEFAULT);
 	if (exist <= 0) {
 		H5Literate(m_file, H5_INDEX_NAME, H5_ITER_NATIVE, nullptr, temp, &op_func);
-	}
-	else{
-		hid_t group = H5Gopen2(m_file,"Simulation 0", H5P_DEFAULT);
+	} else {
+		hid_t group = H5Gopen2(m_file, "Simulation 0", H5P_DEFAULT);
 		H5Literate(group, H5_INDEX_NAME, H5_ITER_NATIVE, nullptr, temp, &op_func);
 		H5Gclose(group);
 	}
 	return result;
 }
 
-void CheckPoint::LoadDisease(const std::string& filename) { LoadFile(filename, "Config/disease"); }
+void CheckPoint::LoadDisease(const std::string& filename)
+{
+	htri_t exist = H5Lexists(m_file, "Simulation 0", H5P_DEFAULT);
+	if (exist > 0) {
+
+		hid_t temp = m_file;
+		m_file = H5Gopen2(temp, "Simulation 0", H5P_DEFAULT);
+		LoadDisease(filename);
+		H5Gclose(m_file);
+		m_file = temp;
+		return;
+	}
+
+	LoadFile(filename, "Config/disease");
+}
 
 void CheckPoint::StoreDisease(const std::string& filename)
 {
@@ -1133,7 +1150,20 @@ void CheckPoint::StoreDisease(const std::string& filename)
 	StoreFile(filename, "disease");
 }
 
-void CheckPoint::LoadMatrix(const std::string& filename) { LoadFile(filename, "Config/contact"); }
+void CheckPoint::LoadMatrix(const std::string& filename)
+{
+	htri_t exist = H5Lexists(m_file, "Simulation 0", H5P_DEFAULT);
+	if (exist > 0) {
+
+		hid_t temp = m_file;
+		m_file = H5Gopen2(temp, "Simulation 0", H5P_DEFAULT);
+		LoadMatrix(filename);
+		H5Gclose(m_file);
+		m_file = temp;
+		return;
+	}
+	LoadFile(filename, "Config/contact");
+}
 
 void CheckPoint::StoreMatrix(const std::string& filename)
 {
@@ -1154,9 +1184,21 @@ void CheckPoint::StoreMatrix(const std::string& filename)
 
 void CheckPoint::LoadConfig(const std::string& filename)
 {
+
 	boost::property_tree::ptree pt_config;
 
-	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
+	htri_t exist = H5Lexists(m_file, "Simulation 0", H5P_DEFAULT);
+	if (exist > 0) {
+
+		hid_t temp = m_file;
+		m_file = H5Gopen2(temp, "Simulation 0", H5P_DEFAULT);
+		LoadConfig(filename);
+		H5Gclose(m_file);
+		m_file = temp;
+		return;
+	}
+
+	exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
 	if (exist <= 0) {
 		FATAL_ERROR("Invalid file");
 	}
@@ -1207,7 +1249,27 @@ void CheckPoint::LoadConfig(const std::string& filename)
 
 void CheckPoint::StoreConfig(const std::string& filename)
 {
-	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
+
+	htri_t exist = H5Lexists(m_file, "Simulation 0", H5P_DEFAULT);
+	if (exist > 0) {
+		auto op_func = [this,&filename](hid_t loc_id, const char* name, const H5L_info_t* info, void* operator_data) {
+			hid_t temp = m_file;
+			m_file = loc_id;
+			StoreConfig(filename);
+			m_file = temp;
+			return 0;
+		};
+		auto temp = [](hid_t loc_id, const char* name, const H5L_info_t* info, void* operator_data) {
+			(*static_cast<decltype(op_func)*>(operator_data))(loc_id, name, info, operator_data);
+			return 0;
+		};
+
+		H5Literate(m_file, H5_INDEX_NAME, H5_ITER_NATIVE, nullptr, temp, &op_func);
+
+		return;
+	}
+
+	exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
 	if (exist <= 0) {
 		FATAL_ERROR("Invalid file");
 	}
@@ -1364,6 +1426,25 @@ void CheckPoint::LoadFile(const std::string& filestr, const std::string& setname
 
 void CheckPoint::StoreFile(const std::string& filename, const std::string& setname)
 {
+	htri_t exist = H5Lexists(m_file, "Simulation 0", H5P_DEFAULT);
+	if (exist > 0) {
+		auto op_func = [this,&filename,&setname](hid_t loc_id, const char* name, const H5L_info_t* info, void* operator_data) {
+			hid_t temp = m_file;
+			m_file = loc_id;
+			StoreFile(filename,setname);
+			m_file = temp;
+			return 0;
+		};
+		auto temp = [](hid_t loc_id, const char* name, const H5L_info_t* info, void* operator_data) {
+			(*static_cast<decltype(op_func)*>(operator_data))(loc_id, name, info, operator_data);
+			return 0;
+		};
+
+		H5Literate(m_file, H5_INDEX_NAME, H5_ITER_NATIVE, nullptr, temp, &op_func);
+
+		return;
+	}
+
 	boost::filesystem::path filep(filename);
 	if (!is_regular_file(filep)) {
 		FATAL_ERROR("Unable to find file: " + filep.string());
