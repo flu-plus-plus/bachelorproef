@@ -95,8 +95,7 @@ public:
 	/// Loads a new simulation task from the Checkpoint.
 	std::shared_ptr<SimulationTask<TResult>> LoadSimulation(
 	    const SingleSimulationConfig& configuration, const std::shared_ptr<spdlog::logger>& log,
-	    const std::unique_ptr<checkpoint::CheckPoint>& cp, const boost::gregorian::date& date,
-	    TInitialResultArgs... args) final override
+	    const std::string& cp, const boost::gregorian::date& date, TInitialResultArgs... args) final override
 	{
 		// Build a simulator.
 		auto sim = SimulatorBuilder::Load(configuration, log, cp, date, number_of_sim_threads);

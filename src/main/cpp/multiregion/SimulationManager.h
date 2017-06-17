@@ -72,8 +72,7 @@ struct SimulationManager
 	/// Loads a simulation from the checkpoint
 	virtual std::shared_ptr<SimulationTask<TResult>> LoadSimulation(
 	    const SingleSimulationConfig& configuration, const std::shared_ptr<spdlog::logger>& log,
-	    const std::unique_ptr<checkpoint::CheckPoint>& cp, const boost::gregorian::date& date,
-	    TInitialResultArgs... args) = 0;
+	    const std::string& cp, const boost::gregorian::date& date, TInitialResultArgs... args) = 0;
 
 	/// Waits for all simulation tasks to complete.
 	virtual void WaitAll() = 0;

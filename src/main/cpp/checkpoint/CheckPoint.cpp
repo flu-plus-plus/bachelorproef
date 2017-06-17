@@ -105,7 +105,8 @@ void CheckPoint::WriteConfig(const SingleSimulationConfig& conf)
 
 void CheckPoint::WriteConfig(const MultiSimulationConfig& conf)
 {
-	hid_t f = m_file;
+	hid_t f = H5Freopen(m_file);
+	H5Fclose(m_file);
 	auto singles = conf.GetSingleConfigs();
 	if (singles.size() == 1) {
 		WriteConfig(singles[0]);
@@ -115,11 +116,12 @@ void CheckPoint::WriteConfig(const MultiSimulationConfig& conf)
 		std::stringstream ss;
 		ss << "Simulation " << i;
 
-		m_file = H5Gcreate2(m_file, ss.str().c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+		m_file = H5Gcreate2(f, ss.str().c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 		WriteConfig(singles[i]);
 		H5Gclose(m_file);
 	}
-	m_file = f;
+	m_file = H5Freopen(f);
+	H5Fclose(f);
 }
 
 void CheckPoint::OpenFile() { m_file = H5Fopen(m_filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT); }
@@ -504,6 +506,39 @@ void CheckPoint::LoadCluster(
 	H5Sclose(dspace);
 }
 
+MultiSimulationConfig CheckPoint::LoadMultiConfig()
+{
+	MultiSimulationConfig result;
+	hid_t origF = H5Freopen(m_file);
+	H5Fclose(m_file);
+	unsigned int i = 0;
+	std::string groupName = "Simulation ";
+	std::string groupstr = groupName + std::to_string(i);
+	htri_t exist = H5Lexists(origF, groupstr.c_str(), H5P_DEFAULT);
+	if (exist <= 0) {
+		auto singleresult = LoadSingleConfig();
+		result.common_config = singleresult.common_config;
+		result.log_config = singleresult.log_config;
+		result.region_models.push_back(singleresult.travel_model);
+	} else {
+		while (exist > 0) {
+			m_file = H5Gopen2(origF, groupstr.c_str(),H5P_DEFAULT);
+			SingleSimulationConfig singleresult = LoadSingleConfig();
+			H5Gclose(m_file);
+			result.common_config = singleresult.common_config;
+			result.log_config = singleresult.log_config;
+			result.region_models.push_back(singleresult.travel_model);
+			i++;
+			groupstr = groupName + std::to_string(i);
+			exist = H5Lexists(origF, groupstr.c_str(), H5P_DEFAULT);
+		}
+	}
+
+	m_file = H5Freopen(origF);
+	H5Fclose(origF);
+	return result;
+}
+
 SingleSimulationConfig CheckPoint::LoadSingleConfig()
 {
 	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
@@ -586,7 +621,7 @@ SingleSimulationConfig CheckPoint::LoadSingleConfig()
 	}
 	auto travelRef = make_shared<multiregion::RegionTravel>(id, popconfig, geoconfig, household);
 	result.travel_model = travelRef;
-
+	H5Gclose(group);
 	return result;
 }
 
@@ -1064,8 +1099,15 @@ boost::gregorian::date CheckPoint::GetLastDate()
 		(*static_cast<decltype(op_func)*>(operator_data))(loc_id, name, info, operator_data);
 		return 0;
 	};
-
-	H5Literate(m_file, H5_INDEX_NAME, H5_ITER_NATIVE, nullptr, temp, &op_func);
+	htri_t exist = H5Lexists(m_file, "Simulation 0", H5P_DEFAULT);
+	if (exist <= 0) {
+		H5Literate(m_file, H5_INDEX_NAME, H5_ITER_NATIVE, nullptr, temp, &op_func);
+	}
+	else{
+		hid_t group = H5Gopen2(m_file,"Simulation 0", H5P_DEFAULT);
+		H5Literate(group, H5_INDEX_NAME, H5_ITER_NATIVE, nullptr, temp, &op_func);
+		H5Gclose(group);
+	}
 	return result;
 }
 
@@ -1155,16 +1197,16 @@ void CheckPoint::LoadConfig(const std::string& filename)
 
 	if (info->data_size == 0) {
 		pt_config.put("Prefix", "");
-	} else 
-	{
-		pt_config.put("Prefix",std::string(prefix.begin(), prefix.end()));
+	} else {
+		pt_config.put("Prefix", std::string(prefix.begin(), prefix.end()));
 	}
 
 	std::ofstream f(filename);
 	boost::property_tree::write_json(f, pt_config);
 }
 
-void CheckPoint::StoreConfig(const std::string& filename) {
+void CheckPoint::StoreConfig(const std::string& filename)
+{
 	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
 	if (exist <= 0) {
 		FATAL_ERROR("Invalid file");
@@ -1205,10 +1247,10 @@ void CheckPoint::StoreConfig(const std::string& filename) {
 	uints[1] = days;
 	uints[3] = LogMode;
 
-	H5Adelete(group,"bools");
-	H5Adelete(group,"uints");
-	H5Adelete(group,"doubles");
-	H5Adelete(group,"prefix");
+	H5Adelete(group, "bools");
+	H5Adelete(group, "uints");
+	H5Adelete(group, "doubles");
+	H5Adelete(group, "prefix");
 
 	hsize_t dims = 3;
 	hid_t dataspace = H5Screate_simple(1, &dims, nullptr);

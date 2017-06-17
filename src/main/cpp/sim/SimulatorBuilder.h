@@ -55,7 +55,7 @@ public:
 	/// Load simulator.
 	static std::shared_ptr<Simulator> Load(
 	    const SingleSimulationConfig& config, const std::shared_ptr<spdlog::logger>& log,
-	    const std::unique_ptr<checkpoint::CheckPoint>&, const boost::gregorian::date&,
+	    const std::string& cpName, const boost::gregorian::date&,
 	    unsigned int num_threads = 1U);
 #endif
 

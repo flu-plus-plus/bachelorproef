@@ -17,7 +17,17 @@
 #include <boost/property_tree/ptree.hpp>
 #include <spdlog/spdlog.h>
 
+#if USE_HDF5
+#include "checkpoint/CheckPoint.h"
+#endif
+
 namespace stride {
+
+#if USE_HDF5
+namespace checkpoint {
+class CheckPoint;
+}
+#endif
 
 class Calendar;
 
@@ -162,6 +172,18 @@ public:
 		m_population->serial_for(m_num_threads, action);
 	}
 
+#if USE_HDF5
+
+	/// Writes the current checkpoint
+	void SaveCheckPoint(unsigned int day);
+
+	/// Writes the Atlas
+	void WriteAtlas();
+
+	/// Creates the checkpoint
+	void CreateCheckPoint(const std::string& name, const std::string& calendarName);
+#endif
+
 private:
 	/// Accepts visitors from other regions.
 	void AcceptVisitors(const multiregion::SimulationStepInput& input);
@@ -240,6 +262,11 @@ private:
 
 	/// General simulation or tracking index case.
 	bool m_track_index_case;
+
+#if USE_HDF5
+	/// The checkpoint connected to this simulator
+	std::unique_ptr<checkpoint::CheckPoint> cp;
+#endif
 
 private:
 	friend class SimulatorBuilder;

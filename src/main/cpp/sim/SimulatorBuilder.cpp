@@ -178,8 +178,8 @@ void SimulatorBuilder::InitializeClusters(shared_ptr<Simulator> sim)
 #if USE_HDF5
 shared_ptr<Simulator> SimulatorBuilder::Load(
     const SingleSimulationConfig& config, const std::shared_ptr<spdlog::logger>& log,
-    const std::unique_ptr<checkpoint::CheckPoint>& cp, const boost::gregorian::date& date, unsigned int num_threads)
-{
+    const std::string& cpName, const boost::gregorian::date& date, unsigned int num_threads)
+{	
 	// Disease file.
 	ptree pt_disease;
 	InstallDirs::ReadXmlFile(config.common_config->disease_config_file_name, InstallDirs::GetDataDir(), pt_disease);
@@ -189,6 +189,10 @@ shared_ptr<Simulator> SimulatorBuilder::Load(
 	InstallDirs::ReadXmlFile(config.common_config->contact_matrix_file_name, InstallDirs::GetDataDir(), pt_contact);
 
 	auto sim = make_shared<Simulator>();
+	sim->cp = std::make_unique<checkpoint::CheckPoint>(cpName);
+	sim->cp->OpenFile();
+	config.common_config->initial_calendar = sim->cp->LoadCalendar(date);
+	sim->cp->CloseFile();
 
 	// Initialize the simulator's configuration.
 	sim->m_config = config;
@@ -214,9 +218,9 @@ shared_ptr<Simulator> SimulatorBuilder::Load(
 	// Build population.
 	sim->m_travel_rng = rng;
 
-	cp->OpenFile();
-	cp->LoadCheckPoint(date, *sim);
-	cp->CloseFile();
+	sim->cp->OpenFile();
+	sim->cp->LoadCheckPoint(date, *sim);
+	sim->cp->CloseFile();
 
 	// Initialize disease profile.
 	sim->m_disease_profile.Initialize(config, pt_disease);

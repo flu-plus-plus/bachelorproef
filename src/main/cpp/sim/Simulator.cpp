@@ -294,4 +294,35 @@ multiregion::SimulationStepOutput Simulator::TimeStep(const multiregion::Simulat
 	m_calendar->AdvanceDay();
 	return ReturnVisitors();
 }
+
+#if USE_HDF5
+
+	/// Writes the current checkpoint
+	void Simulator::SaveCheckPoint(unsigned int day)
+	{
+		cp->OpenFile();
+		cp->SaveCheckPoint(*this, day);
+		cp->CloseFile();
+	}
+
+	/// Writes the Atlas
+	void Simulator::WriteAtlas()
+	{
+		cp->OpenFile();
+		cp->WriteAtlas(m_population->GetAtlas());
+		cp->CloseFile();
+	}
+
+	/// Creates the checkpoint
+	void Simulator::CreateCheckPoint(const std::string& name, const std::string& calendarName)
+	{
+		cp = std::make_unique<checkpoint::CheckPoint>(name);
+		cp->CreateFile();
+		cp->OpenFile();
+		cp->WriteConfig(m_config);
+		cp->WriteHolidays(calendarName);
+		cp->CloseFile();
+	}
+#endif
+
 } // end_of_namespace

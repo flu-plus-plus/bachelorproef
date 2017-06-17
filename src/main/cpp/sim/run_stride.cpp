@@ -44,10 +44,13 @@ using namespace checkpoint;
 
 std::mutex StrideSimulatorResult::io_mutex;
 bool load = false;
+bool isMultiConfig = false;
 boost::gregorian::date date;
+std::string calendarFile = "";
 
 #if USE_HDF5
 std::unique_ptr<CheckPoint> cp;
+std::string cpname;
 #endif
 
 /// Performs an action just before a simulator step is performed.
@@ -59,10 +62,13 @@ void StrideSimulatorResult::BeforeSimulatorStep(Simulator& sim)
 	if (sim.GetConfiguration().common_config->use_checkpoint) {
 		if (day == 0 && !load) {
 			// saves the start configuration
-			cp->OpenFile();
-			cp->SaveCheckPoint(sim, day);
-			cp->WriteAtlas(sim.GetPopulation()->GetAtlas());
-			cp->CloseFile();
+			std::string cpFile = cpname;
+			if (isMultiConfig) {
+				cpFile = std::to_string(sim.GetConfiguration().GetId()) + "_" + cpname;
+			}
+			sim.CreateCheckPoint(cpFile, calendarFile);
+			sim.SaveCheckPoint(day);
+			sim.WriteAtlas();
 		}
 	}
 #endif
@@ -73,17 +79,23 @@ void StrideSimulatorResult::BeforeSimulatorStep(Simulator& sim)
 }
 
 /// Performs an action just after a simulator step has been performed.
-void StrideSimulatorResult::AfterSimulatorStep(const Simulator& sim)
+void StrideSimulatorResult::AfterSimulatorStep(Simulator& sim)
 {
 #if USE_HDF5
 	if (sim.GetConfiguration().common_config->use_checkpoint) {
 		// saves the last configuration or configuration after an interval.
 		if (sim.IsDone() || util::INTERRUPT ||
 		    (day + 1) % sim.GetConfiguration().common_config->checkpoint_interval == 0) {
-			cp->OpenFile();
-			cp->SaveCheckPoint(sim, day);
-			cp->CloseFile();
+			sim.SaveCheckPoint(day);
 		}
+	}
+	if (sim.IsDone() and sim.GetConfiguration().common_config->use_checkpoint and isMultiConfig) {
+
+		unsigned int id = sim.GetConfiguration().GetId();
+		std::string subFile = std::to_string(sim.GetConfiguration().GetId()) + "_" + cpname;
+		cp->OpenFile();
+		cp->CombineCheckPoint(id, subFile);
+		cp->CloseFile();
 	}
 #endif
 	auto pop = sim.GetPopulation();
@@ -190,6 +202,9 @@ void run_stride(const MultiSimulationConfig& config)
 		SingleSimulationConfig sim_config;
 		std::shared_ptr<multiregion::SimulationTask<StrideSimulatorResult>> sim_task;
 	};
+
+	isMultiConfig = config.GetSingleConfigs().size() > 1;
+
 	std::vector<SimulationTuple> tasks;
 	for (const auto& single_config : config.GetSingleConfigs()) {
 		multiregion::RegionId region_id = single_config.GetId();
@@ -209,10 +224,19 @@ void run_stride(const MultiSimulationConfig& config)
 		file_logger->set_pattern("%v"); // Remove meta data from log => time-stamp of logging
 
 #if USE_HDF5
+		std::string cpfile = cpname;
+		if (isMultiConfig) {
+			cpfile = std::to_string(region_id) + "_" + cpname;
+			if (load) {
+				cp->OpenFile();
+				cp->SplitCheckPoint(region_id, cpfile);
+				cp->CloseFile();
+			}
+		}
 		if (load) {
 			tasks.push_back(
 			    {log_name, sim_output_prefix, single_config,
-			     sim_manager.LoadSimulation(single_config, file_logger, cp, date, region_id)});
+			     sim_manager.LoadSimulation(single_config, file_logger, cpfile, date, region_id)});
 		} else {
 			tasks.push_back(
 			    {log_name, sim_output_prefix, single_config,
@@ -224,6 +248,13 @@ void run_stride(const MultiSimulationConfig& config)
 		     sim_manager.CreateSimulation(single_config, file_logger, region_id)});
 #endif
 	}
+
+#if USE_HDF5
+	if(isMultiConfig){
+		cp->CreateFile();
+	}
+#endif
+
 	cout << "Done building simulators. " << endl << endl;
 
 	// -----------------------------------------------------------------------------------------
@@ -314,14 +345,11 @@ void run_stride(
 	}
 #if USE_HDF5
 	if (config.common_config->use_checkpoint) {
-		cp = std::make_unique<CheckPoint>(realFile);
-
+		cpname = realFile;
+		cp = std::make_unique<checkpoint::CheckPoint>(realFile);
+		calendarFile =
+		    pt_config.get_child("run").get<std::string>("holidays_file", "holidays_flanders_2016.json");
 		cp->CreateFile();
-		cp->OpenFile();
-		cp->WriteConfig(config);
-		cp->WriteHolidays(
-		    pt_config.get_child("run").get<std::string>("holidays_file", "holidays_flanders_2016.json"));
-		cp->CloseFile();
 	}
 #endif
 
@@ -354,8 +382,8 @@ void run_stride_noConfig(
 		}
 		actualFile = besTime.filename().string();
 	}
-	cp = std::make_unique<CheckPoint>(actualFile);
-
+	cpname = actualFile;
+	cp = std::make_unique<checkpoint::CheckPoint>(actualFile);
 	if (datestr.empty()) {
 		cp->OpenFile();
 		date = cp->GetLastDate();
@@ -375,9 +403,10 @@ void run_stride_noConfig(
 	cout << "Date:  " << boost::gregorian::to_simple_string(date) << endl;
 
 	cp->OpenFile();
-	SingleSimulationConfig config = cp->LoadSingleConfig();
-	config.common_config->initial_calendar = cp->LoadCalendar(date);
+	MultiSimulationConfig config = cp->LoadMultiConfig();
 	cp->CloseFile();
+
+	std::cout<<"Loaded the config"<<std::endl;
 	config.common_config->generate_vis_file = gen_vis;
 	config.common_config->checkpoint_interval = interval;
 

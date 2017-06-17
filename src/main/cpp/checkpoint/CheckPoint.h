@@ -11,6 +11,8 @@
 #include "sim/Simulator.h"
 
 namespace stride {
+class Simulator;
+struct ClusterStruct;
 namespace checkpoint {
 
 class CheckPoint
@@ -46,6 +48,9 @@ public:
 
 	/// Copies the info of the asked simulation into the given file
 	void SplitCheckPoint(unsigned int simulation, const std::string& filename);
+
+	/// Loads the MultiConfig.
+	MultiSimulationConfig LoadMultiConfig();
 
 	/// Loads a SingleSimulationConfig.
 	SingleSimulationConfig LoadSingleConfig();
