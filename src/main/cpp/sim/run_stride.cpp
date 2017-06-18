@@ -1,6 +1,5 @@
 #include "run_stride.h"
 
-#include "checkpoint/CheckPoint.h"
 #include "multiregion/ParallelSimulationManager.h"
 #include "multiregion/SimulationManager.h"
 #include "multiregion/TravelModel.h"
@@ -32,6 +31,11 @@
 #include <string>
 #include <utility>
 
+#if USE_HDF5
+#include "checkpoint/CheckPoint.h"
+using namespace stride::checkpoint;
+#endif
+
 namespace stride {
 
 using namespace output;
@@ -40,7 +44,6 @@ using namespace boost::filesystem;
 using namespace boost::property_tree;
 using namespace std;
 using namespace std::chrono;
-using namespace checkpoint;
 
 std::mutex StrideSimulatorResult::io_mutex;
 bool load = false;
@@ -84,12 +87,12 @@ void StrideSimulatorResult::AfterSimulatorStep(Simulator& sim)
 #if USE_HDF5
 	if (sim.GetConfiguration().common_config->use_checkpoint) {
 		// saves the last configuration or configuration after an interval.
-		if (sim.IsDone() || util::INTERRUPT ||
+		if (sim.IsDone() || (util::INTERRUPT && !isMultiConfig ) ||
 		    (day + 1) % sim.GetConfiguration().common_config->checkpoint_interval == 0) {
 			sim.SaveCheckPoint(day);
 		}
 	}
-	if (sim.IsDone() and sim.GetConfiguration().common_config->use_checkpoint and isMultiConfig) {
+	if (sim.IsDone() && sim.GetConfiguration().common_config->use_checkpoint && isMultiConfig) {
 
 		unsigned int id = sim.GetConfiguration().GetId();
 		std::string subFile = std::to_string(sim.GetConfiguration().GetId()) + "_" + cpname;
@@ -250,7 +253,7 @@ void run_stride(const MultiSimulationConfig& config)
 	}
 
 #if USE_HDF5
-	if(isMultiConfig and config.common_config->use_checkpoint){
+	if(isMultiConfig && config.common_config->use_checkpoint){
 		cp->CreateFile();
 	}
 #endif
@@ -315,7 +318,7 @@ void run_stride(
     bool track_index_case, const string& config_file_name, const std::string& h5_file, const std::string& date,
     bool gen_vis, bool checkpoint, unsigned int interval)
 {
-	if (config_file_name.empty() and checkpoint) {
+	if (config_file_name.empty() && checkpoint) {
 		run_stride_noConfig(track_index_case, h5_file, date, gen_vis, interval);
 		return;
 	}

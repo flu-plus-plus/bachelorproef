@@ -1097,7 +1097,7 @@ boost::gregorian::date CheckPoint::GetLastDate()
 			return 0;
 		}
 		boost::gregorian::date toCheck(boost::gregorian::from_undelimited_string(name));
-		if (toCheck > result or result.is_not_a_date()) {
+		if (toCheck > result || result.is_not_a_date()) {
 			result = toCheck;
 		}
 		return 0;
