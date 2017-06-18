@@ -309,7 +309,7 @@ multiregion::SimulationStepOutput Simulator::TimeStep(const multiregion::Simulat
 	void Simulator::WriteAtlas()
 	{
 		cp->OpenFile();
-		cp->WriteAtlas(m_population->GetAtlas());
+		cp->WriteAtlas(m_population->get_atlas());
 		cp->CloseFile();
 	}
 

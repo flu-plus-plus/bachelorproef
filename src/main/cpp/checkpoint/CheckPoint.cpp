@@ -1032,7 +1032,10 @@ void CheckPoint::LoadAtlas(Population& pop)
 	H5Tclose(newType);
 
 	if (data.empty()) {
-		pop.has_atlas = false;
+		pop.set_has_atlas(false);
+	}
+	else{
+		pop.set_has_atlas(true);
 	}
 
 	for (auto& c : data) {
@@ -1082,7 +1085,7 @@ void CheckPoint::LoadTowns(Population& pop)
 		map.emplace(position, town);
 	}
 
-	pop.AtlasRegisterTowns(map);
+	pop.atlas_register_towns(map);
 }
 
 boost::gregorian::date CheckPoint::GetLastDate()

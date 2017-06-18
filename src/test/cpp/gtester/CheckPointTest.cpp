@@ -126,7 +126,7 @@ TEST(CheckPoint, SaveLoadCheckPoint)
 	cp->CreateFile();
 	cp->OpenFile();
 	cp->SaveCheckPoint(*sim, 0);
-	cp->WriteAtlas(sim->GetPopulation()->GetAtlas());
+	cp->WriteAtlas(sim->GetPopulation()->get_atlas());
 	cp->CloseFile();
 
 	Simulator SimRead;
