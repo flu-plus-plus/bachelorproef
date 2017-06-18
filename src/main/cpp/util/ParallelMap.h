@@ -725,7 +725,7 @@ public:
 			// Only start jobs if we know that they're non-empty.
 			if (start_iterator != vals.end() && start_iterator != end_iterator) {
 				thread_pool.emplace_back([this, &action, i, start_iterator, end_iterator] {
-					std::shared_lock<shared_mutex_type> write_lock{parallel_iter_mutex};
+					std::shared_lock<shared_mutex_type> read_lock{parallel_iter_mutex};
 					for (auto it = start_iterator; it != end_iterator; it++) {
 						auto& elem = *it;
 						action(elem.first, elem.second, i);

@@ -1,4 +1,6 @@
+#include <chrono>
 #include <iostream>
+#include <thread>
 #include <vector>
 #include <gtest/gtest.h>
 #include "util/Parallel.h"
@@ -87,6 +89,25 @@ void map_test(const MapForType<int, int>& run_for)
 	}
 }
 
+static stride::util::parallel::ParallelMap<int, int> create_perf_test_map(std::size_t size)
+{
+	stride::util::parallel::ParallelMap<int, int> values;
+	for (std::size_t i = 0; i < size; i++) {
+		values[i] = 0;
+	}
+	return values;
+}
+
+static stride::util::parallel::ParallelMap<int, int> perf_test_map1 = create_perf_test_map(100);
+static stride::util::parallel::ParallelMap<int, int> perf_test_map2 = create_perf_test_map(500);
+static stride::util::parallel::ParallelMap<int, int> perf_test_map3 = create_perf_test_map(1000);
+
+void map_perf_test(stride::util::parallel::ParallelMap<int, int>& map, const MapForType<int, int>& run_for)
+{
+	using namespace std::chrono_literals;
+	run_for(map, [](const int& key, int& val, unsigned int) { std::this_thread::sleep_for(1ms); });
+}
+
 TEST(Parallel, MapSerial)
 {
 	map_test([](stride::util::parallel::ParallelMap<int, int>& values, const MapActionType<int, int>& action) {
@@ -104,8 +125,65 @@ TEST(Parallel, MapParallel)
 TEST(Parallel, MapPseudoParallel)
 {
 	map_test([](stride::util::parallel::ParallelMap<int, int>& values, const MapActionType<int, int>& action) {
-		stride::util::parallel::parallel_for(values, 1, action);
+		stride::util::parallel::parallel_for(values, 1u, action);
 	});
+}
+
+TEST(Parallel, MapPerf1Serial)
+{
+	map_perf_test(
+	    perf_test_map1,
+	    [](stride::util::parallel::ParallelMap<int, int>& values, const MapActionType<int, int>& action) {
+		    stride::util::parallel::serial_for(values, action);
+	    });
+}
+
+TEST(Parallel, MapPerf1Parallel)
+{
+	map_perf_test(
+	    perf_test_map1,
+	    [](stride::util::parallel::ParallelMap<int, int>& values, const MapActionType<int, int>& action) {
+		    stride::util::parallel::parallel_for(
+			values, stride::util::parallel::get_number_of_threads(), action);
+	    });
+}
+
+TEST(Parallel, MapPerf2Serial)
+{
+	map_perf_test(
+	    perf_test_map2,
+	    [](stride::util::parallel::ParallelMap<int, int>& values, const MapActionType<int, int>& action) {
+		    stride::util::parallel::serial_for(values, action);
+	    });
+}
+
+TEST(Parallel, MapPerf2Parallel)
+{
+	map_perf_test(
+	    perf_test_map2,
+	    [](stride::util::parallel::ParallelMap<int, int>& values, const MapActionType<int, int>& action) {
+		    stride::util::parallel::parallel_for(
+			values, stride::util::parallel::get_number_of_threads(), action);
+	    });
+}
+
+TEST(Parallel, MapPerf3Serial)
+{
+	map_perf_test(
+	    perf_test_map3,
+	    [](stride::util::parallel::ParallelMap<int, int>& values, const MapActionType<int, int>& action) {
+		    stride::util::parallel::serial_for(values, action);
+	    });
+}
+
+TEST(Parallel, MapPerf3Parallel)
+{
+	map_perf_test(
+	    perf_test_map3,
+	    [](stride::util::parallel::ParallelMap<int, int>& values, const MapActionType<int, int>& action) {
+		    stride::util::parallel::parallel_for(
+			values, stride::util::parallel::get_number_of_threads(), action);
+	    });
 }
 
 } // Tests

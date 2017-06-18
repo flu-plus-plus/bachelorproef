@@ -135,10 +135,10 @@ TEST(CheckPoint, SaveLoadCheckPoint)
 	cp->LoadCheckPoint(sim->GetDate(), SimRead);
 	cp->CloseFile();
 
-	stride::Population origPop = *sim->GetPopulation();
+	const auto& origPop = *sim->GetPopulation();
 	ClusterStruct clOrig = sim->GetClusters();
 
-	auto popRead = *SimRead.GetPopulation();
+	const auto& popRead = *SimRead.GetPopulation();
 	auto clRead = SimRead.GetClusters();
 
 	EXPECT_EQ(origPop.size(), popRead.size());
@@ -242,8 +242,8 @@ TEST(CheckPoint, SaveLoadCheckPoint)
 		}
 	}
 
-	Atlas origAtlas = origPop.GetAtlas();
-	Atlas readAtlas = popRead.GetAtlas();
+	Atlas origAtlas = origPop.get_atlas();
+	Atlas readAtlas = popRead.get_atlas();
 
 	for (auto& key : origAtlas.cluster_map) {
 		auto it = readAtlas.cluster_map.find(key.first);

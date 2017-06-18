@@ -386,7 +386,7 @@ void CheckPoint::LoadCheckPoint(boost::gregorian::date date, Simulator& sim)
 	hsize_t dims;
 	H5Sget_simple_extent_dims(dspace, &dims, nullptr);
 
-	Population result;
+	auto result = make_shared<Population>();
 
 	for (hsize_t i = 0; i < dims; i++) {
 		hsize_t start = i;
@@ -424,7 +424,7 @@ void CheckPoint::LoadCheckPoint(boost::gregorian::date date, Simulator& sim)
 			toAdd.GetHealth().Update();
 		}
 
-		result.emplace(toAdd);
+		result->emplace(toAdd);
 		H5Sclose(subspace);
 	}
 
@@ -432,19 +432,19 @@ void CheckPoint::LoadCheckPoint(boost::gregorian::date date, Simulator& sim)
 	H5Tclose(newType);
 	H5Dclose(dset);
 
-	LoadAtlas(result);
+	LoadAtlas(*result);
 
 	sim.SetPopulation(result);
-	sim.SetExpatriates(LoadExpatriates(result, date));
+	sim.SetExpatriates(LoadExpatriates(*result, date));
 	sim.SetVisitors(LoadVisitors(date));
 
 	ClusterStruct clusters;
 	// loading clusters
-	LoadCluster(sim.GetClusters().m_households, ClusterType::Household, groupname, result);
-	LoadCluster(sim.GetClusters().m_school_clusters, ClusterType::School, groupname, result);
-	LoadCluster(sim.GetClusters().m_work_clusters, ClusterType::Work, groupname, result);
-	LoadCluster(sim.GetClusters().m_primary_community, ClusterType::PrimaryCommunity, groupname, result);
-	LoadCluster(sim.GetClusters().m_secondary_community, ClusterType::SecondaryCommunity, groupname, result);
+	LoadCluster(sim.GetClusters().m_households, ClusterType::Household, groupname, *result);
+	LoadCluster(sim.GetClusters().m_school_clusters, ClusterType::School, groupname, *result);
+	LoadCluster(sim.GetClusters().m_work_clusters, ClusterType::Work, groupname, *result);
+	LoadCluster(sim.GetClusters().m_primary_community, ClusterType::PrimaryCommunity, groupname, *result);
+	LoadCluster(sim.GetClusters().m_secondary_community, ClusterType::SecondaryCommunity, groupname, *result);
 }
 
 void CheckPoint::LoadCluster(
@@ -1040,7 +1040,7 @@ void CheckPoint::LoadAtlas(Population& pop)
 		geo::GeoPosition postion;
 		postion.latitude = c.latitude;
 		postion.longitude = c.longitude;
-		pop.AtlasEmplaceCluster(key, postion);
+		pop.atlas_emplace_cluster(key, postion);
 	}
 	LoadTowns(pop);
 }

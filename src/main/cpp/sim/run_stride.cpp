@@ -103,7 +103,7 @@ void StrideSimulatorResult::AfterSimulatorStep(Simulator& sim)
 	auto infected_count = sim.GetPopulation()->get_infected_count();
 	cases.push_back(infected_count);
 
-	if (generate_vis_data && pop->has_atlas) {
+	if (generate_vis_data && pop->has_atlas()) {
 		visualizer_data.AddDay(pop);
 		// Every 10 days, or if the simulation is done: Update the visualization file.
 		if (sim.IsDone() || util::INTERRUPT || (day + 1) % 10 == 0) {

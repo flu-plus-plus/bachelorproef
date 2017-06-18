@@ -69,8 +69,7 @@ Population Generator::Generate()
 	using College = School;
 
 	// The population object we're filling up.
-	Population population;
-	population.has_atlas = true;
+	Population population(true);
 
 	// Throughout this method, `n` is a counter for how many people are
 	// left to accomodate for. When towns, schools, etc. are added to the
@@ -124,7 +123,7 @@ Population Generator::Generate()
 	}
 
 	// Store all town/city locations in the population's atlas.
-	population.AtlasRegisterTowns(town_map);
+	population.atlas_register_towns(town_map);
 
 	// A map from GeoPositions to # of people to generate there: A dressed-down town_map.
 	std::map<GeoPosition, int> population_distribution;
@@ -312,28 +311,28 @@ Population Generator::Generate()
 		HouseholdClusterId household_id = 1;
 		for (const auto& p : households)
 			for (auto it = p.second.begin(); it != p.second.end(); ++it)
-				population.AtlasEmplaceCluster({household_id++, ClusterType::Household}, p.first);
+				population.atlas_emplace_cluster({household_id++, ClusterType::Household}, p.first);
 
 		for (const auto& p : schools)
 			for (const auto& school : p.second)
 				for (SchoolClusterId id : school)
-					population.AtlasEmplaceCluster({id, ClusterType::School}, p.first);
+					population.atlas_emplace_cluster({id, ClusterType::School}, p.first);
 
 		for (const auto& p : colleges)
 			for (SchoolClusterId id : p.second)
-				population.AtlasEmplaceCluster({id, ClusterType::School}, p.first);
+				population.atlas_emplace_cluster({id, ClusterType::School}, p.first);
 
 		for (const auto& p : workplaces)
 			for (WorkClusterId id : p.second)
-				population.AtlasEmplaceCluster({id, ClusterType::Work}, p.first);
+				population.atlas_emplace_cluster({id, ClusterType::Work}, p.first);
 
 		for (const auto& p : primary_communities)
 			for (CommunityClusterId id : p.second)
-				population.AtlasEmplaceCluster({id, ClusterType::PrimaryCommunity}, p.first);
+				population.atlas_emplace_cluster({id, ClusterType::PrimaryCommunity}, p.first);
 
 		for (const auto& p : secondary_communities)
 			for (CommunityClusterId id : p.second)
-				population.AtlasEmplaceCluster({id, ClusterType::SecondaryCommunity}, p.first);
+				population.atlas_emplace_cluster({id, ClusterType::SecondaryCommunity}, p.first);
 	}
 
 	/* {

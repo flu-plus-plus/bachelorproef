@@ -25,8 +25,22 @@ private:
 	util::parallel::ParallelMap<PersonId, std::shared_ptr<PersonData>> people;
 	PersonId max_person_id;
 	Atlas atlas;
+	bool has_atlas_flag;
 
 public:
+	/// Creates a population. No atlas is associated with the population.
+	Population() : has_atlas_flag(false) {}
+
+	/// Creates a population. The given Boolean specifies if the population
+	/// includes an atlas.
+	Population(bool has_atlas) : has_atlas_flag(has_atlas) {}
+
+	Population(const Population&) = delete;
+	Population& operator=(const Population&) = delete;
+
+	Population(Population&&) = default;
+	Population& operator=(Population&&) = default;
+
 	/// An iterator implementation for Population containers.
 	class const_iterator final
 	{
@@ -104,8 +118,11 @@ public:
 	/// Gets the number of people in this population.
 	auto size() const -> decltype(people.size()) { return people.size(); }
 
-	/// Get the atlas.
-	const Atlas& GetAtlas() const { return atlas; }
+	/// Tests if this population uses an atlas.
+	bool has_atlas() const { return has_atlas_flag; }
+
+	/// Gets this population's atlas.
+	const Atlas& get_atlas() const { return atlas; }
 
 	/// Creates a constant iterator positioned at the first person in this population.
 	const_iterator begin() const { return const_iterator(people.begin()); }
@@ -145,21 +162,20 @@ public:
 	}
 
 	/// Register the map of GeoPositions to Towns to the atlas.
-	void AtlasRegisterTowns(Atlas::TownMap& towns) { atlas.RegisterTowns(towns); }
+	void atlas_register_towns(const Atlas::TownMap& towns) { atlas.RegisterTowns(towns); }
 
 	/// Store a Cluster's GeoPosition in the population's atlas.
-	auto AtlasEmplaceCluster(const Atlas::ClusterKey& key, const geo::GeoPosition& pos)
+	auto atlas_emplace_cluster(const Atlas::ClusterKey& key, const geo::GeoPosition& pos)
 	    -> decltype(atlas.EmplaceCluster(key, pos))
 	{
 		return atlas.EmplaceCluster(key, pos);
 	}
 
-	const Atlas::Town& GetHometown(const Person& person) const
+	/// Gets the given person's hometown.
+	const Atlas::Town& get_hometown(const Person& person) const
 	{
 		return atlas.LookupTown({person.GetClusterId(ClusterType::Household), ClusterType::Household});
 	}
-
-	bool has_atlas;
 
 	/// Runs the `action` on every element of this vector. Up to `number_of_threads` instances of
 	/// the `action` are run at the same time. `action` must be invocable with signature

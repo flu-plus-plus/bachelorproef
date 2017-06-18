@@ -1,0 +1,132 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[backend=bibtex]{biblatex}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{pxfonts}
+\frenchspacing
+\bibliography{final-report}
+
+\newcommand{\sourcefile}[1]{\texttt{src/main/cpp/#1}}
+\newcommand{\shorttypename}[1]{\texttt{#1}}
+% \newcommand{\typename}[2]{\texttt{#1::#2}} % namespaces (qualified names)
+\newcommand{\typename}[2]{\texttt{#2}} % no namespaces (unqualified names)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{Project Report: Flu++ Group}
+\author{Sibert Aerts, C\'edric De Haes,\\ Jonathan Van der Cruysse, Lynn Van Hauwe}
+\date{June 2017}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\maketitle
+\section*{Preface}
+This document is a retrospective report for our bachelor's degree group project: a fork of the \emph{Stride} disease modeling simulator. \autocite{bachelorproef} We will give an overview of the features we added, and describe the hurdles and obstacles we ran into while implementing each of them.
+
+\tableofcontents
+\pagebreak
+
+\section{HDF5 checkpointing}
+% TODO
+
+\section{Parallelization}
+
+The parallelization sub-task was implemented in full and extended with some extra features. Additional features include: a uniform parallelization API, two parallelization implementations that do not depend on external libraries, and a parallel map implementation that has been integrated into the \typename{stride}{Population} type.
+
+\subsection{Parallelization libraries}
+
+The CMake script will pick an appropriate parallelization library at configure-time and build Stride for that library.
+
+We implemented parallelization by first creating a small common API (\sourcefile{util/Parallel.h}) and then implementing that API for specific parallelization libraries. In total we have created four implementations: OpenMP, TBB, a home-grown implementation based on standard library threads, and a reference implementation that does not distribute work across processing units.
+
+The user manual includes a detailed overview of how the configuration process works, along with a performance comparison of parallelization libraries.
+
+\subsection{Parallelizing maps}
+
+\subsubsection{Approach}
+
+We also tried to parallelize operations on (dense) \typename{std}{map<K, V>} contents. In this context it proved somewhat difficult to carve up the data structure in chunks before processing each chunk separately. \typename{std}{map<K, V>} does not provide an API that allows us to create such chunks nor does it support getting an iterator to the $n$th element like an \typename{std}{vector<T>}.
+
+We resorted to a clever trick: we request the minimum and maximum keys in the \typename{std}{map<K, V>} and partition $\left[\text{min}, \text{max}\right]$ into $n$ ranges $\left[k_i, k_{i+1}\right)$ of (quasi-)equal length. We then request iterators to the key-value pairs with key $k_i$.
+
+If some $k_i$ is not a key in the \typename{std}{map<K, V>}, then we insert a dummy pair $\left(k_i, \shorttypename{V()}\right)$ into the map, get the iterator to that pair, advance said iterator to the next pair, and delete the dummy pair we inserted.
+
+Once we have an iterator starting at key $k'_i$ for each $k_i$ such that $k_i \le k'_i \le k'_{i+1}$ for $i \in \left\{0, 1, \dots, n\right\}$, we spawn a number of threads an give each thread a range of keys $\left[k'_i, k'_{i+1}\right)$ to process.
+
+\subsubsection{Complexity analysis}
+
+A simple complexity analysis shows that our chunking techniques scales well. Let $d\left(m\right)$ be the number of operations it takes for \typename{std}{map<K, V>} to get an iterator to an element, insert an element, increment an iterator, and delete an element. We know that $d \in O\left(\log m\right)$.
+
+We want to start $n$ threads, which implies that we need to obtain $n + 1$ iterators. This yields us an overall time complexity of $O\left(n \cdot \log m\right)$.
+
+The complexity obtained above is quite suitable for quickly dividing a container into chunks---$n$ tends to be rather small ($n \le 16$ even for high-end desktop machines) and $\log m$ is also small, even for large values of $m$.
+
+\subsubsection{Drawbacks}
+
+There are two main drawbacks to the approach we use to carve up \typename{std}{map<K, V>} instances:
+
+\begin{itemize}
+	\item We assume that keys are distributed more or less uniformly. This is a fundamental limitation: there's nothing we can do about. Fortunately, our assumption turned out to be mostly correct for all \typename{std}{map<K, V>} values on which we wanted to operate in parallel.
+	
+	\item Carving the \typename{std}{map<K, V>} into chunks mutates the container's contents. This is non-obvious and may bite users that want to run multiple parallel queries \emph{simultaneously}---even pure parallel queries are thread-unsafe if the approach outlined above is used na\"ively.
+\end{itemize}
+
+We mitigated the effects of the latter drawback by creating a new data structure: \typename{stride::util::parallel}{ParallelMap<K, V>} wraps an \typename{std}{map<K, V>} and a reader--writer lock. \typename{stride::util::parallel}{ParallelMap<K, V>} offers the same interface as \typename{std}{map<K, V>} and augments that interface with parallel and serial iteration functionality.
+
+When an operation is to be applied in parallel to the contents of a \typename{stride::util::parallel}{ParallelMap<K, V>}, a (unique) writer lock is held while chunks are created. All other operations, including the operations inherited from \typename{std}{map<K, V>}, acquire a (shared) reader lock. The consequence is that, if used in isolation, serial map functionality will never block, and parallel usage will block only while carving out chunks (which is rather fast).
+
+Note that \typename{stride::util::parallel}{ParallelMap<K, V>} is \emph{not} a thread-safe wrapper around \typename{std}{map<K, V>}. Rather, it offers the \emph{same} thread-safety characteristics, with the addition of thread-safe parallel and serial iteration functionality.
+
+\subsubsection{Performance analysis}
+
+\autoref{fig:parallel-map-performance} presents statistics to evaluate iterating over all elements in a \typename{stride::util::parallel}{ParallelMap<K, V>} serially or in parallel. Over the course of fifty runs per map size, eight threads were applied to \typename{stride::util::parallel}{ParallelMap<K, V>} that contained one hundred, five hundred or one thousand elements. Processing a single element from the array takes approximately one millisecond. The measurements were produced by an Intel Core i7-6700K CPU running Ubuntu 17.04 and gcc 6.3.0.
+
+\begin{figure}[h]
+	\begin{tabular}{r|r|r|r|r|r}
+		{\footnotesize \textbf{elems}} & {\footnotesize \textbf{serial mean}} & {\footnotesize \textbf{parallel mean}} & {\footnotesize \textbf{serial stddev.}} & {\footnotesize \textbf{parallel stddev.}} & {\footnotesize \textbf{speedup}} \\
+		100 & 0.110s & 0.028s & 0.002s & 0.007s & 3.93 \\
+		500 & 0.553s & 0.083s & 0.006s & 0.007s & 6.66 \\
+		1,000 & 1.111s & 0.158s & 0.015s & 0.010s & 7.03
+	\end{tabular}
+	\caption{Statistics for evaluating \typename{stride::util::parallel}{ParallelMap<K, V>} performance}
+	\label{fig:parallel-map-performance}
+\end{figure}
+
+The table above shows that \typename{stride::util::parallel}{ParallelMap<K, V>} is quite effective for its intended purpose: processing map elements in parallel results in a significant speedup. Most importantly, the speedup factor increases with the number of elements in the map, which makes \typename{stride::util::parallel}{ParallelMap<K, V>} quite suitable for the large collections managed by Stride.
+
+\section{Synthetic population generation}
+The population generation sub-task was fully implemented: if Stride is run with a population model XML file as the \texttt{population\_file}, the parameters in that file are used to generate a population from scratch.
+
+\subsection{Challenges}
+The population generator was challenging in an unusual way, compared to the rest of the project: integrating it into the other pieces was simple, but the requirements were trickier to adhere to.
+
+We initially wrote the population generation code following the first version of the specification as closely as possible, but we (and other groups) concluded that it was difficult, if not impossible, to generate populations for which all the requirements it specified held simultaneously. This part of the spec ended up getting rewritten, meaning we had to start over from scratch.
+
+Generating towns that lie geographically between the specified cities was harder than expected. We measure the convex hull spanned by the pre-existing cities, and sample random points inside it. This way, the simulation area for a geo-distribution profile like \texttt{belgium\_population\_major.csv} is roughly Belgium-shaped, but this only works because Belgium is approximately convex to begin with.
+
+\subsection{Implementation details}
+Our generator returns a twofold result: the generated \texttt{Population} contains a collection of person data fitting the parameters defined in the model, for the simulator, and also an \texttt{Atlas} object, which contains geographical data about the generated towns and cities, for the Visualization tool to use.
+
+Lynn wrote both the initial and final versions of the generator.
+
+\section{Multi-region simulations}
+% TODO
+
+\section{Visualization tool}
+% TODO
+
+\section{Overarching tasks}
+\subsection{Team cooperation} % how did we divide work? etc.
+\subsection{Workflow} % talk about issues and GitHub PRs
+\subsection{Tests and CI} % Jenkins, Travis, test reports
+\subsection{Documentation}
+\subsection{The Gantt chart}
+\subsection{Merging with \texttt{comp}}
+
+\pagebreak
+\printbibliography
+% This is assuming there'll be more references, but it might be silly to list them if not. We could inline them into the footnotes or something.
+
+\end{document}

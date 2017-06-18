@@ -74,7 +74,7 @@ public:
 	ClusterStruct& GetClusters() { return m_clusters; }
 
 	/// Sets the population.
-	void SetPopulation(const Population& population) { m_population = std::make_shared<Population>(population); }
+	void SetPopulation(const std::shared_ptr<Population>& population) { m_population = population; }
 
 	/// Sets the visitor journal
 	void SetVisitors(const multiregion::VisitorJournal& visitors) { m_visitors = visitors; }

@@ -1,5 +1,6 @@
 from __future__ import division
 from collections import OrderedDict
+import sys
 
 
 def compute_stats(data):
@@ -62,6 +63,7 @@ def lines_to_data(lines):
 
 
 if __name__ == "__main__":
-    with open('measurements.txt') as f:
+    file_name = 'measurements.txt' if len(sys.argv) <= 1 else sys.argv[1]
+    with open(file_name) as f:
         for output_line in compute_stats(lines_to_data(f.readlines())):
             print(output_line)

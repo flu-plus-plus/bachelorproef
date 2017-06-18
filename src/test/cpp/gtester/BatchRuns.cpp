@@ -95,6 +95,7 @@ TEST_P(BatchDemos, Run)
 	tuple<string, unsigned int> t(GetParam());
 	const string test_tag = get<0>(t);
 	const unsigned int num_threads = get<1>(t);
+	auto old_number_of_threads = stride::util::parallel::get_number_of_threads();
 	if (!stride::util::parallel::try_set_number_of_threads(num_threads) && num_threads != 1) {
 		return;
 	}
@@ -174,6 +175,8 @@ TEST_P(BatchDemos, Run)
 	// -----------------------------------------------------------------------------------------
 	const unsigned int num_cases = sim->GetPopulation()->get_infected_count();
 	ASSERT_NEAR(num_cases, g_results.at(test_tag), 15000) << "!! CHANGED !!";
+
+	stride::util::parallel::try_set_number_of_threads(old_number_of_threads);
 }
 
 namespace {

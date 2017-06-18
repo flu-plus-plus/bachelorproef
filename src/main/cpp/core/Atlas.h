@@ -62,7 +62,7 @@ public:
 	}
 
 	/// Associate a GeoPosition with a specific Town.
-	void RegisterTowns(TownMap& towns) { town_map = towns; }
+	void RegisterTowns(const TownMap& towns) { town_map = towns; }
 
 	ClusterMap cluster_map;
 	TownMap town_map;

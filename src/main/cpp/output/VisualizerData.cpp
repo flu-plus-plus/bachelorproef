@@ -13,12 +13,12 @@ using boost::property_tree::ptree;
 void VisualizerData::AddDay(const std::shared_ptr<const Population>& pop)
 {
 	if(!townsTree)
-		RegisterTowns(pop->GetAtlas().getTownMap());
+		RegisterTowns(pop->get_atlas().getTownMap());
 
 	days.push_back({});
 	for (const auto& p : *pop) {
 		if (p.GetHealth().IsInfected()) {
-			days.back()[pop->GetHometown(p).id]++;
+			days.back()[pop->get_hometown(p).id]++;
 		}
 	}
 }
@@ -45,7 +45,7 @@ const vector<map<size_t, int>>& VisualizerData::GetDays() const { return days; }
 shared_ptr<ptree> VisualizerData::GetDaysTree()
 {
 	// First update our stored ptree to include all added days.
-	for (int i = daysTree->size(); i < days.size(); i++) {
+	for (size_t i = daysTree->size(); i < days.size(); i++) {
 		ptree data;
 		const auto& currentDay = days[i];
 
