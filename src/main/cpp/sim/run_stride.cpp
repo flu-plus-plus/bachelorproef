@@ -250,7 +250,7 @@ void run_stride(const MultiSimulationConfig& config)
 	}
 
 #if USE_HDF5
-	if(isMultiConfig){
+	if(isMultiConfig and config.common_config->use_checkpoint){
 		cp->CreateFile();
 	}
 #endif
