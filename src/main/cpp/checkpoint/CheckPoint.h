@@ -76,82 +76,84 @@ public:
 
 	/// Writes the Atlas.
 	/// The parameter is the Atlas to write.
-	void WriteAtlas(const Atlas&);
+	void WriteAtlas(const Atlas& atlas);
 
 	/// Loads the disease in the given file.
 	/// The parameter is the name of the file to write to.
-	void LoadDisease(const std::string&);
+	void LoadDisease(const std::string& filename);
 
 	/// Stores the disease from the given file into the checkpoint.
 	/// The parameter is the name of the file to load from.
-	void StoreDisease(const std::string&);
+	void StoreDisease(const std::string& filename);
 
 	/// Loads the contact matrix in the given file.
 	/// The parameter is the name of the file to write to.
-	void LoadMatrix(const std::string&);
+	void LoadMatrix(const std::string& filename);
 
 	/// Stores the contact matrix from the given file into the checkpoint.
 	/// The parameter is the name of the file to load from.
 
-	void StoreMatrix(const std::string&);
+	void StoreMatrix(const std::string& filename);
 
 	/// Loads the changable config values in json-format in the file with given name.
 	/// The parameter is the name of the file to write to.
-	void LoadConfig(const std::string&);
+	void LoadConfig(const std::string& filename);
 
 	/// Stores the changable config values from the given file.
 	/// The parameter is the name of the file to load from.
-	void StoreConfig(const std::string&);
+	void StoreConfig(const std::string& filename);
 
 private:
 	/// Writes the current population to a checkpoint.
-	void WritePopulation(const Population&, boost::gregorian::date);
+	void WritePopulation(const Population& pop, boost::gregorian::date date);
 
 	/// Writes the clusters to a checkpoint.
-	void WriteClusters(const ClusterStruct&, boost::gregorian::date);
+	void WriteClusters(const ClusterStruct& clusters, boost::gregorian::date date);
 
 	/// Writes the visitors to a checkpoint.
-	void WriteVisitors(multiregion::VisitorJournal&, boost::gregorian::date, std::size_t day);
+	void WriteVisitors(multiregion::VisitorJournal& visitors, boost::gregorian::date date, std::size_t day day);
 
 	/// Writes the expatriates to a checkpoint.
-	void WriteExpatriates(multiregion::ExpatriateJournal&, boost::gregorian::date);
+	void WriteExpatriates(multiregion::ExpatriateJournal& expatriates, boost::gregorian::date date);
 
 	/// Loads one type Cluster
-	void WriteCluster(const std::vector<Cluster>&, hid_t&, const ClusterType&);
+	void WriteCluster(const std::vector<Cluster>& clusters, hid_t& group, const ClusterType& type);
 
 	/// Loads one type Cluster
-	void LoadCluster(std::vector<Cluster>&, const ClusterType&, const std::string& groupname, const Population&);
+	void LoadCluster(
+	    std::vector<Cluster>& clusters, const ClusterType& type, const std::string& groupname,
+	    const Population& pop);
 
 	/// Loads the Expatriate journal
-	multiregion::ExpatriateJournal LoadExpatriates(const Population&, boost::gregorian::date);
+	multiregion::ExpatriateJournal LoadExpatriates(const Population& pop, boost::gregorian::date date);
 
 	/// Loads the Visitor journal
-	multiregion::VisitorJournal LoadVisitors(boost::gregorian::date);
+	multiregion::VisitorJournal LoadVisitors(boost::gregorian::date date);
 
 	/// Loads the Atlas directly into the population
-	void LoadAtlas(Population&);
+	void LoadAtlas(Population& pop);
 
 	/// Writes a file to a dataset. The first string is the filename in the data folder. The second string is the
 	/// name of the dataset
-	void WriteFileDSet(const std::string&, const std::string&);
+	void WriteFileDSet(const std::string& filename, const std::string& setname);
 
 	/// Writes a dataset to a file. The first string is the filename in the data folder. The second string is the
 	/// name of the dataset
-	std::string WriteDSetFile(const std::string&, const std::string&);
+	std::string WriteDSetFile(const std::string& filename, const std::string& setname);
 
 	/// This loads the data in the file in the first string in the dataset with the name of the second string
 	/// This looks like WriteDSetFile, but does not load it in the datafolder.
-	void LoadFile(const std::string&, const std::string&);
+	void LoadFile(const std::string& filename, const std::string& setname);
 
 	/// This stores the data in the file in the first string in the dataset with the name of the second string
 	/// This looks like WriteFileDSet, but the file is not neccesarily in the datafolder.
-	void StoreFile(const std::string&, const std::string&);
+	void StoreFile(const std::string& filename, const std::string& setname);
 
 	/// Writes the towns from the Atlas
-	void WriteTowns(const Atlas&);
+	void WriteTowns(const Atlas& atlas);
 
 	/// Loads the towns into the Atlas
-	void LoadTowns(Population&);
+	void LoadTowns(Population& pop);
 
 	hid_t m_file;		      //< current hdf5 workspace
 	const std::string m_filename; //< filename
