@@ -173,6 +173,34 @@ Sibert implemented visualization.
 \subsection{Team cooperation} % how did we divide work? etc.
 \subsection{Workflow} % talk about issues and GitHub PRs
 \subsection{Tests and CI} % Jenkins, Travis, test reports
+
+We initially set up both Jenkins and Travis CI for our project, but later abandoned Jenkins in favor of an all-Travis workflow.
+
+Whenever someone pushes at least one commit to their fork of the master repository, Travis clones the appropriate branch of said fork. It subsequently follows the instructions in our \texttt{.travis.yml} file, which can be summarized as the following steps:
+
+\begin{enumerate}
+	\item Download or build external dependencies such as CMake, a C++ compiler, Boost, \dots
+	\item Build Stride
+	\item Run all tests
+	\item Generate a comparison report and push it to \url{https://flu-plus-plus.github.io/gtest-reports/comparison.html}.
+\end{enumerate}
+
+The above happens on every push for the following targets:
+
+\begin{tabular}{l|l|l}
+	\textbf{Operating system} & \textbf{Compiler} & \textbf{Parallelization library} \\
+	Ubuntu Trusty Tahr & GCC 6.0 & OpenMP \\
+	Ubuntu Trusty Tahr & Clang 4.0 & TBB \\
+	Ubuntu Trusty Tahr & Clang 4.0 & STL \\
+	Mac OS X Sierra & AppleClang (XCode 8.3) & STL \\
+\end{tabular}
+
+Travis CI gives us a blank virtual machine on every build, except for some cached folders. Explicitly downloading or building dependencies ensures that our forks of Stride don't bit-rot away by depending on the specifics of the machine hosting a Jenkins build. Cached folders allow us to cache, e.g., compiled Boost binaries, which saves us time on the next build and reduces the strain we put on Travis CI's resources.
+
+In addition to building our commits, Travis also makes sure that our pull requests can be merged into the master repository without regressing on any of the tests. If \texttt{git} can merge a pull request's contents merged into the master repository, Travis will clone the master repository, merge in the pull request locally, and run the tests, as per usual.
+
+All of this is integrated nicely in GitHub's pull request workflow: a status badge tells us if a pull request builds and passes all tests. Additionally, we configured GitHub's \emph{protected branches} feature to require that the Travis build always succeed before merging a pull request into the master branch of our master repository. Barring nondeterminism, this configuration ensures that the master branch's tests never fail.
+
 \subsection{Documentation}
 \subsection{The Gantt chart}
 \subsection{Merging with \texttt{comp}}
