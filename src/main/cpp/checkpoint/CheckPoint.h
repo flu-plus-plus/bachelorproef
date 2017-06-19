@@ -111,7 +111,7 @@ private:
 	void WriteClusters(const ClusterStruct& clusters, boost::gregorian::date date);
 
 	/// Writes the visitors to a checkpoint.
-	void WriteVisitors(multiregion::VisitorJournal& visitors, boost::gregorian::date date, std::size_t day day);
+	void WriteVisitors(multiregion::VisitorJournal& visitors, boost::gregorian::date date, std::size_t day);
 
 	/// Writes the expatriates to a checkpoint.
 	void WriteExpatriates(multiregion::ExpatriateJournal& expatriates, boost::gregorian::date date);
