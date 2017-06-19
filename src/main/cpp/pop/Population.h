@@ -122,7 +122,7 @@ public:
 	bool has_atlas() const { return has_atlas_flag; }
 
 	/// Sets the has_atlas_flag.
-	void set_has_atlas(bool has_atlas){has_atlas_flag = has_atlas;}
+	void set_has_atlas(bool has_atlas) { has_atlas_flag = has_atlas; }
 
 	/// Gets this population's atlas.
 	const Atlas& get_atlas() const { return atlas; }

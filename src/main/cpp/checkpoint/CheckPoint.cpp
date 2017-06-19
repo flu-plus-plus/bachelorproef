@@ -126,24 +126,14 @@ void CheckPoint::WriteConfig(const MultiSimulationConfig& conf)
 
 void CheckPoint::OpenFile() { m_file = H5Fopen(m_filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT); }
 
-void CheckPoint::WriteHolidays(const std::string& filename, unsigned int* group)
+void CheckPoint::WriteHolidays(const std::string& filename)
 {
-	hid_t temp = m_file;
-	if (group != nullptr) {
-		std::stringstream ss;
-		ss << "Simulation " << *group;
-		m_file = H5Gopen2(m_file, ss.str().c_str(), H5P_DEFAULT);
-	}
 	htri_t exist = H5Lexists(m_file, "Config", H5P_DEFAULT);
 	if (exist <= 0) {
 		hid_t tempCreate = H5Gcreate2(m_file, "Config", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 		H5Gclose(tempCreate);
 	}
 	WriteFileDSet(filename, "holidays");
-	if (group != nullptr) {
-		H5Gclose(m_file);
-		m_file = temp;
-	}
 }
 
 void CheckPoint::WritePopulation(const Population& pop, boost::gregorian::date date)
@@ -263,13 +253,13 @@ std::string CheckPoint::WriteDSetFile(const std::string& filestr, const std::str
 	hid_t spaceId;
 	hid_t dataType = H5T_NATIVE_CHAR;
 
-	// std::cout << "HDF5 Data Type: " <<	H5Lite::HDFTypeForPrimitiveAsStr(test) << std::endl;
+	// std::cerr << "HDF5 Data Type: " <<	H5Lite::HDFTypeForPrimitiveAsStr(test) << std::endl;
 	/* Open the dataset. */
-	// std::cout << "  Opening " << dsetName << " for data Retrieval.  "<< std::endl;
+	// std::cerr << "  Opening " << dsetName << " for data Retrieval.  "<< std::endl;
 	did = H5Dopen(m_file, setname.c_str(), H5P_DEFAULT);
 
 	if (did < 0) {
-		std::cout << " Error opening Dataset: " << did << std::endl;
+		std::cerr << " Error opening Dataset: " << did << std::endl;
 		return "";
 	}
 
@@ -300,25 +290,25 @@ std::string CheckPoint::WriteDSetFile(const std::string& filestr, const std::str
 				for (std::vector<hsize_t>::iterator iter = dims.begin(); iter < dims.end(); ++iter) {
 					numElements = numElements * (*iter);
 				}
-				// std::cout << "NumElements: " << numElements << std::endl;
+				// std::cerr << "NumElements: " << numElements << std::endl;
 				// Resize the vector
 				data.resize(static_cast<int>(numElements));
 				// for (uint32_t i = 0; i<numElements; ++i) { data[i] = 55555555;}
 				err = H5Dread(did, dataType, H5S_ALL, H5S_ALL, H5P_DEFAULT, &(data.front()));
 				if (err < 0) {
-					std::cout << "Error Reading Data." << std::endl;
+					std::cerr << "Error Reading Data." << std::endl;
 				}
 			}
 			err = H5Sclose(spaceId);
 			if (err < 0) {
-				std::cout << "Error Closing Data Space" << std::endl;
+				std::cerr << "Error Closing Data Space" << std::endl;
 			}
 		} else {
-			std::cout << "Error Opening SpaceID" << std::endl;
+			std::cerr << "Error Opening SpaceID" << std::endl;
 		}
 		err = H5Dclose(did);
 		if (err < 0) {
-			std::cout << "Error Closing Dataset" << std::endl;
+			std::cerr << "Error Closing Dataset" << std::endl;
 		}
 		for (auto& c : data) {
 			out << c;
@@ -1033,8 +1023,7 @@ void CheckPoint::LoadAtlas(Population& pop)
 
 	if (data.empty()) {
 		pop.set_has_atlas(false);
-	}
-	else{
+	} else {
 		pop.set_has_atlas(true);
 	}
 
@@ -1147,7 +1136,7 @@ void CheckPoint::StoreDisease(const std::string& filename)
 		disease.Initialize(temp, pt_disease);
 
 	} catch (std::exception& e) {
-		std::cout << e.what() << std::endl;
+		std::cerr << e.what() << std::endl;
 		FATAL_ERROR("INVALID DISEASE FILE");
 	}
 	StoreFile(filename, "disease");
@@ -1255,13 +1244,14 @@ void CheckPoint::StoreConfig(const std::string& filename)
 
 	htri_t exist = H5Lexists(m_file, "Simulation 0", H5P_DEFAULT);
 	if (exist > 0) {
-		auto op_func = [this,&filename](hid_t loc_id, const char* name, const H5L_info_t* info, void* operator_data) {
-			hid_t temp = m_file;
-			m_file = loc_id;
-			StoreConfig(filename);
-			m_file = temp;
-			return 0;
-		};
+		auto op_func =
+		    [this, &filename](hid_t loc_id, const char* name, const H5L_info_t* info, void* operator_data) {
+			    hid_t temp = m_file;
+			    m_file = loc_id;
+			    StoreConfig(filename);
+			    m_file = temp;
+			    return 0;
+		    };
 		auto temp = [](hid_t loc_id, const char* name, const H5L_info_t* info, void* operator_data) {
 			(*static_cast<decltype(op_func)*>(operator_data))(loc_id, name, info, operator_data);
 			return 0;
@@ -1363,13 +1353,13 @@ void CheckPoint::LoadFile(const std::string& filestr, const std::string& setname
 	hid_t spaceId;
 	hid_t dataType = H5T_NATIVE_CHAR;
 
-	// std::cout << "HDF5 Data Type: " <<	H5Lite::HDFTypeForPrimitiveAsStr(test) << std::endl;
+	// std::cerr << "HDF5 Data Type: " <<	H5Lite::HDFTypeForPrimitiveAsStr(test) << std::endl;
 	/* Open the dataset. */
-	// std::cout << "  Opening " << dsetName << " for data Retrieval.  "<< std::endl;
+	// std::cerr << "  Opening " << dsetName << " for data Retrieval.  "<< std::endl;
 	did = H5Dopen(m_file, setname.c_str(), H5P_DEFAULT);
 
 	if (did < 0) {
-		std::cout << " Error opening Dataset: " << did << std::endl;
+		std::cerr << " Error opening Dataset: " << did << std::endl;
 		return;
 	}
 
@@ -1400,25 +1390,25 @@ void CheckPoint::LoadFile(const std::string& filestr, const std::string& setname
 				for (std::vector<hsize_t>::iterator iter = dims.begin(); iter < dims.end(); ++iter) {
 					numElements = numElements * (*iter);
 				}
-				// std::cout << "NumElements: " << numElements << std::endl;
+				// std::cerr << "NumElements: " << numElements << std::endl;
 				// Resize the vector
 				data.resize(static_cast<int>(numElements));
 				// for (uint32_t i = 0; i<numElements; ++i) { data[i] = 55555555;}
 				err = H5Dread(did, dataType, H5S_ALL, H5S_ALL, H5P_DEFAULT, &(data.front()));
 				if (err < 0) {
-					std::cout << "Error Reading Data." << std::endl;
+					std::cerr << "Error Reading Data." << std::endl;
 				}
 			}
 			err = H5Sclose(spaceId);
 			if (err < 0) {
-				std::cout << "Error Closing Data Space" << std::endl;
+				std::cerr << "Error Closing Data Space" << std::endl;
 			}
 		} else {
-			std::cout << "Error Opening SpaceID" << std::endl;
+			std::cerr << "Error Opening SpaceID" << std::endl;
 		}
 		err = H5Dclose(did);
 		if (err < 0) {
-			std::cout << "Error Closing Dataset" << std::endl;
+			std::cerr << "Error Closing Dataset" << std::endl;
 		}
 		for (auto& c : data) {
 			out << c;
@@ -1431,10 +1421,11 @@ void CheckPoint::StoreFile(const std::string& filename, const std::string& setna
 {
 	htri_t exist = H5Lexists(m_file, "Simulation 0", H5P_DEFAULT);
 	if (exist > 0) {
-		auto op_func = [this,&filename,&setname](hid_t loc_id, const char* name, const H5L_info_t* info, void* operator_data) {
+		auto op_func = [this, &filename,
+				&setname](hid_t loc_id, const char* name, const H5L_info_t* info, void* operator_data) {
 			hid_t temp = m_file;
 			m_file = loc_id;
-			StoreFile(filename,setname);
+			StoreFile(filename, setname);
 			m_file = temp;
 			return 0;
 		};

@@ -32,57 +32,75 @@ public:
 	void CloseFile();
 
 	/// Writes the MultiSimulationConfig in different simulation groups if necessary.
+	/// The parameter is the MultiSimulationConfig you want to write
 	void WriteConfig(const MultiSimulationConfig& conf);
 
 	/// Writes the SingleSimulationConfig.
+	/// The parameter is the SingleSimulationConfig you want to write
 	void WriteConfig(const SingleSimulationConfig& conf);
 
 	/// Loads all data from a checkpoint into a Simulator. It will not load the configuration.
+	/// The first parameter is the date to load, the second parameter is the simulation to load into.
 	void LoadCheckPoint(boost::gregorian::date date, Simulator& sim);
 
 	/// Saves the current simulation to a checkpoint with the date as Identifier.
+	/// The first parameter is the Simulator you save from, the second parameter is the day in the simulation.
 	void SaveCheckPoint(const Simulator& simulation, std::size_t day);
 
-	/// Copies the info in the filename under the data of the given simulation
+	/// Copies the info in the filename under the data of the given simulation.
+	/// The first parameter is the ID of the simulation you want to save, the second parameter is the name of the
+	/// file subcheckpoint.
 	void CombineCheckPoint(unsigned int simulation, const std::string& filename);
 
-	/// Copies the info of the asked simulation into the given file
+	/// Copies the info of the asked simulation into the given file.
+	/// The first parameter is the ID of the simulation you want to load, the second parameter is the file you want
+	/// to write it to.
 	void SplitCheckPoint(unsigned int simulation, const std::string& filename);
 
-	/// Loads the MultiConfig.
+	/// Loads the MultiConfig of a checkpoint. Can be used from a single or multicheckpoint.
 	MultiSimulationConfig LoadMultiConfig();
 
-	/// Loads a SingleSimulationConfig.
+	/// Loads a SingleSimulationConfig. This can only be used from a singular checkpoint.
 	SingleSimulationConfig LoadSingleConfig();
 
-	/// Writes the holidays from a file. The int pointer represents the group.
-	void WriteHolidays(const std::string& filename, unsigned int* simulation = NULL);
+	/// Writes the holidays to the checkpoint from a file.
+	/// The parameter is the file to containing the info about the holidays.
+	void WriteHolidays(const std::string& filename);
 
 	/// Loads the Calendar starting with the given date.
+	/// The parameter is the start day of the Calendar.
 	Calendar LoadCalendar(boost::gregorian::date date);
 
 	/// Search for the last date written.
 	boost::gregorian::date GetLastDate();
 
-	/// Writes the Atlas
+	/// Writes the Atlas.
+	/// The parameter is the Atlas to write.
 	void WriteAtlas(const Atlas&);
 
-	/// Loads the disease in the given file
+	/// Loads the disease in the given file.
+	/// The parameter is the name of the file to write to.
 	void LoadDisease(const std::string&);
 
-	/// Stores the disease from the given file into the checkpoint
+	/// Stores the disease from the given file into the checkpoint.
+	/// The parameter is the name of the file to load from.
 	void StoreDisease(const std::string&);
 
-	/// Loads the contact matrix in the given file
+	/// Loads the contact matrix in the given file.
+	/// The parameter is the name of the file to write to.
 	void LoadMatrix(const std::string&);
 
-	/// Stores the contact matrix from the given file into the checkpoint
+	/// Stores the contact matrix from the given file into the checkpoint.
+	/// The parameter is the name of the file to load from.
+
 	void StoreMatrix(const std::string&);
 
 	/// Loads the changable config values in json-format in the file with given name.
+	/// The parameter is the name of the file to write to.
 	void LoadConfig(const std::string&);
 
 	/// Stores the changable config values from the given file.
+	/// The parameter is the name of the file to load from.
 	void StoreConfig(const std::string&);
 
 private:

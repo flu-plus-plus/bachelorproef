@@ -14,48 +14,48 @@ std::unique_ptr<checkpoint::CheckPoint> cp;
 
 void storeCP(const std::string& config, const std::string& disease, const std::string& matrix)
 {
-	if(!config.empty()){
-		std::cout<<"Storing config"<<std::endl;
+	if (!config.empty()) {
+		std::cout << "Storing config" << std::endl;
 		cp->OpenFile();
 		cp->StoreConfig(config);
 		cp->CloseFile();
 	}
-	if(!disease.empty()){
-		std::cout<<"Storing disease"<<std::endl;
+	if (!disease.empty()) {
+		std::cout << "Storing disease" << std::endl;
 		cp->OpenFile();
 		cp->StoreDisease(disease);
 		cp->CloseFile();
 	}
-	if(!matrix.empty()){
-		std::cout<<"Storing contact matrix"<<std::endl;
+	if (!matrix.empty()) {
+		std::cout << "Storing contact matrix" << std::endl;
 		cp->OpenFile();
 		cp->StoreMatrix(matrix);
 		cp->CloseFile();
 	}
-	std::cout<<"Done storing"<<std::endl;
+	std::cout << "Done storing" << std::endl;
 }
 
 void loadCP(const std::string& config, const std::string& disease, const std::string& matrix)
 {
-	if(!config.empty()){
-		std::cout<<"Loading config"<<std::endl;
+	if (!config.empty()) {
+		std::cout << "Loading config" << std::endl;
 		cp->OpenFile();
 		cp->LoadConfig(config);
 		cp->CloseFile();
 	}
-	if(!disease.empty()){
-		std::cout<<"Loading disease"<<std::endl;
+	if (!disease.empty()) {
+		std::cout << "Loading disease" << std::endl;
 		cp->OpenFile();
 		cp->LoadDisease(disease);
 		cp->CloseFile();
 	}
-	if(!matrix.empty()){
-		std::cout<<"Loading contact matrix"<<std::endl;
+	if (!matrix.empty()) {
+		std::cout << "Loading contact matrix" << std::endl;
 		cp->OpenFile();
 		cp->LoadMatrix(matrix);
 		cp->CloseFile();
 	}
-	std::cout<<"Done loading"<<std::endl;
+	std::cout << "Done loading" << std::endl;
 }
 
 /// Main program of the stridecp program.
