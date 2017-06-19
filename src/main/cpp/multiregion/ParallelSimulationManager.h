@@ -91,6 +91,24 @@ public:
 		return task;
 	}
 
+#if USE_HDF5
+	/// Loads a new simulation task from the Checkpoint.
+	std::shared_ptr<SimulationTask<TResult>> LoadSimulation(
+	    const SingleSimulationConfig& configuration, const std::shared_ptr<spdlog::logger>& log,
+	    const std::string& cp, const boost::gregorian::date& date, TInitialResultArgs... args) final override
+	{
+		// Build a simulator.
+		auto sim = SimulatorBuilder::Load(configuration, log, cp, date, number_of_sim_threads);
+		auto id = configuration.travel_model->GetRegionId();
+		auto task = std::make_shared<LocalSimulationTask<TResult, ParallelTaskCommunicator>>(
+		    sim, ParallelTaskCommunicator(id, this), args..., configuration.common_config->generate_vis_file);
+		tasks[id] = task;
+		comm_data.MarkReady(id);
+		active_task_count++;
+		return task;
+	}
+#endif
+
 	/// Waits for all tasks to complete.
 	void WaitAll() final override
 	{

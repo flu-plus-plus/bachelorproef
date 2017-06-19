@@ -29,7 +29,48 @@ This document is a retrospective report for our bachelor's degree group project:
 \pagebreak
 
 \section{HDF5 checkpointing}
-% TODO
+The HDF5 checkpointing was only partly implemented. There is also 1 additional feature: if an iterrupt is called during a single simulation, the current step will be completed and the result will be saved. This does not work with multiregion simulators due to a lack of time to implement this feature.
+
+\subsection{HDF5 library}
+For this project, we used the recommended C API from HDF5.
+It is possible to make the project without having the HDF5 library or to compile it using the macro STRIDE\_FORCE\_NO\_HDF5. This will disable all things related to checkpointing. It will not even be compiled.
+
+\subsection{Approach}
+We started with making a checkpointing mechanism for a single simulation.
+
+We save everything used in the configuration. The files are kept als a string of characters. Other configuration variables are saved as attributes of the group containing those files. The Atlas and Towns used in the visualisation are also saved in this config map.
+\\
+Other maps have the date from the checkpoint as name. These contain a dataset with all the info about the population, a dataset with all the extra information about the visitors, a dataset with all the information about the expatriates and finally a dataset for each clustertype. These cluster datasets have a somewhat weird format too make sure we save all the clusters. The first column is the clusterID. The second column contains the UserID of a used in that cluster. If there is a new cluster, it will first be a clusterID and 0. This is to make sure empty clusters are also saved.
+\\
+For a multi simulation checkpoint, we just put all the checkpoints of the used single simulations together. This makes it very easy to load the different simulations because we just need to extract the corresponding checkpoint from the multicheckpoint.
+
+\subsection{Editing HDF5 files}
+During the programming, we used hdfview 2.9 to look at the h5-files. At the start, we edited these files immideately to get other configurations. 
+Towards the end, we made the stridecp program to be able to edit some things in the h5 file.
+\\Following things can be changed in the h5 file using stridecp:
+\begin{itemize}
+	\item The disease file
+	\item The contact matrix
+	\item Following configuration features:
+	\begin{itemize}
+		\item Wether or not to track the index case
+		\item R0 value
+		\item The RNG seed
+		\item The amount of days to simulate
+		\item Log Mode
+		\item The prefix to the log files
+	\end{itemize}
+\end{itemize}
+\subsection{Missing Features}
+There are 2 missing features in checkpointing. It does not work with MPI and we doe not have a ParaView plug-in.
+
+\subsubsection{MPI}
+The whole MPI part is missing from this project. That is why checkpointing also does not have a MPI implementation. We did look for a way to do this, but we could not find an easy way to send data over an MPI link.
+
+\subsubsection{ParaView Plugin}
+We heard from other groups that there were a lot of problems with ParaView (ParaView not compiling, Segmentation Fault on loading a plugin, ...). This and a lack of time are the reasons this feature is missing.
+
+C'{e}dric wrote everything to do with checkpointing.
 
 \section{Parallelization}
 

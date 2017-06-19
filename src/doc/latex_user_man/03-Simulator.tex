@@ -16,8 +16,9 @@ Compilation and installation of the software will create the following files and
     		in directory \texttt{<project\_dir>/bin}
       	\begin{itemize}
         		\item $stride$: executable.
+            \item $stridecp$: executable to modify checkpoints.
 		\item $gtester$: regression tests for the sequential code.
-        		\item $wrapper\_sim.py$: Python simulation wrapper  		
+        		\item $wrapper\_sim.py$: Python simulation wrapper. 		
         \end{itemize}
     \item Configuration files (xml and json)
       	in directory \texttt{<project\_dir>/config}
@@ -77,6 +78,24 @@ From the workspace directory, the simulator can be started with default configur
 
 \item \texttt{-i} or \texttt{{-}-interval}: The number of days between checkpoints, not counting the first and last days. If not set it only checkpoints the first and last days.
 
+\end{compactitem}
+
+\section{Change the checkpoint}
+
+
+From the workspace directory, the configurable data in a checkpoint file f.h5 can be looked at with the command \mbox{``\texttt{./bin/stridecp f.h5}''}. Settings can be passed to the simulator using one or more command line arguments:
+
+\begin{compactitem}
+
+\item \texttt{-s} or \texttt{{-}-store}: Putting data into the file.
+
+\item \texttt{-d} or \texttt{{-}-disease}: The disease file you want to save or load.
+
+\item \texttt{-c} or \texttt{{-}-configuration}: The file containing the subset of information that can be changed.
+
+\item \texttt{-m} or \texttt{{-}-contact-matrix}: The contact matrix file you want to save or load.
+
+\item The argument without a flag is the checkpoint file to be used. This argument is necessary.
 \end{compactitem}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

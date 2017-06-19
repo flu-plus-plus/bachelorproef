@@ -175,4 +175,74 @@ void SimulatorBuilder::InitializeClusters(shared_ptr<Simulator> sim)
 	population.serial_for([&](const Person& p, unsigned int) -> void { sim->AddPersonToClusters(p); });
 }
 
+#if USE_HDF5
+shared_ptr<Simulator> SimulatorBuilder::Load(
+    const SingleSimulationConfig& config, const std::shared_ptr<spdlog::logger>& log,
+    const std::string& cpName, const boost::gregorian::date& date, unsigned int num_threads)
+{	
+	// Disease file.
+	ptree pt_disease;
+	InstallDirs::ReadXmlFile(config.common_config->disease_config_file_name, InstallDirs::GetDataDir(), pt_disease);
+
+	// Contact file.
+	ptree pt_contact;
+	InstallDirs::ReadXmlFile(config.common_config->contact_matrix_file_name, InstallDirs::GetDataDir(), pt_contact);
+
+	auto sim = make_shared<Simulator>();
+	sim->cp = std::make_unique<checkpoint::CheckPoint>(cpName);
+	sim->cp->OpenFile();
+	config.common_config->initial_calendar = sim->cp->LoadCalendar(date);
+	sim->cp->CloseFile();
+
+	// Initialize the simulator's configuration.
+	sim->m_config = config;
+
+	// Initialize the simulator's log.
+	sim->m_log = log;
+
+	// Initialize track_index_case policy
+	sim->m_track_index_case = config.common_config->track_index_case;
+
+	// Initialize number of threads.
+	sim->m_num_threads = num_threads;
+
+	// Initialize calendar.
+	sim->m_calendar = make_shared<Calendar>(config.common_config->initial_calendar);
+
+	// Get log level.
+	sim->m_log_level = config.log_config->log_level;
+
+	// Create a random number generator for the simulator.
+	auto rng = std::make_shared<Random>(config.common_config->rng_seed);
+
+	// Build population.
+	sim->m_travel_rng = rng;
+
+	sim->cp->OpenFile();
+	sim->cp->LoadCheckPoint(date, *sim);
+	sim->cp->CloseFile();
+
+	// Initialize disease profile.
+	sim->m_disease_profile.Initialize(config, pt_disease);
+
+	// Initialize Rng handlers
+	unsigned int new_seed = (*rng)(numeric_limits<unsigned int>::max());
+	for (size_t i = 0; i < sim->m_num_threads; i++) {
+		sim->m_rng_handler.emplace_back(RngHandler(new_seed, sim->m_num_threads, i));
+	}
+
+	// Initialize contact profiles.
+	Cluster::AddContactProfile(ClusterType::Household, ContactProfile(ClusterType::Household, pt_contact));
+	Cluster::AddContactProfile(ClusterType::School, ContactProfile(ClusterType::School, pt_contact));
+	Cluster::AddContactProfile(ClusterType::Work, ContactProfile(ClusterType::Work, pt_contact));
+	Cluster::AddContactProfile(
+	    ClusterType::PrimaryCommunity, ContactProfile(ClusterType::PrimaryCommunity, pt_contact));
+	Cluster::AddContactProfile(
+	    ClusterType::SecondaryCommunity, ContactProfile(ClusterType::SecondaryCommunity, pt_contact));
+
+	// Done.
+	return sim;
+}
+#endif
+
 } // end_of_namespace

@@ -108,11 +108,21 @@ public:
 		return result;
 	}
 
+	/// Gets the person with the given id in this population.
+	Person getPerson(PersonId id) const
+	{
+		Person result(id, people.find(id)->second);
+		return result;
+	}
+
 	/// Gets the number of people in this population.
 	auto size() const -> decltype(people.size()) { return people.size(); }
 
 	/// Tests if this population uses an atlas.
 	bool has_atlas() const { return has_atlas_flag; }
+
+	/// Sets the has_atlas_flag.
+	void set_has_atlas(bool has_atlas) { has_atlas_flag = has_atlas; }
 
 	/// Gets this population's atlas.
 	const Atlas& get_atlas() const { return atlas; }

@@ -68,6 +68,12 @@ struct SimulationManager
 	virtual std::shared_ptr<SimulationTask<TResult>> CreateSimulation(
 	    const SingleSimulationConfig& configuration, const std::shared_ptr<spdlog::logger>& log,
 	    TInitialResultArgs... args) = 0;
+#if USE_HDF5
+	/// Loads a simulation from the checkpoint
+	virtual std::shared_ptr<SimulationTask<TResult>> LoadSimulation(
+	    const SingleSimulationConfig& configuration, const std::shared_ptr<spdlog::logger>& log,
+	    const std::string& cp, const boost::gregorian::date& date, TInitialResultArgs... args) = 0;
+#endif
 
 	/// Waits for all simulation tasks to complete.
 	virtual void WaitAll() = 0;

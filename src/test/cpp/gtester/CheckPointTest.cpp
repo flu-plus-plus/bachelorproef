@@ -125,7 +125,8 @@ TEST(CheckPoint, SaveLoadCheckPoint)
 
 	cp->CreateFile();
 	cp->OpenFile();
-	cp->SaveCheckPoint(*sim,0);
+	cp->SaveCheckPoint(*sim, 0);
+	cp->WriteAtlas(sim->GetPopulation()->get_atlas());
 	cp->CloseFile();
 
 	Simulator SimRead;
@@ -244,13 +245,19 @@ TEST(CheckPoint, SaveLoadCheckPoint)
 	Atlas origAtlas = origPop.get_atlas();
 	Atlas readAtlas = popRead.get_atlas();
 
-	for(auto &key: origAtlas.cluster_map){
+	for (auto& key : origAtlas.cluster_map) {
 		auto it = readAtlas.cluster_map.find(key.first);
-		EXPECT_NE(it,readAtlas.cluster_map.end());
+		EXPECT_NE(it, readAtlas.cluster_map.end());
 		EXPECT_EQ(key.second.latitude, it->second.latitude);
 		EXPECT_EQ(key.second.longitude, it->second.longitude);
 	}
 
-
+	for (auto& key : origAtlas.town_map) {
+		auto it = readAtlas.town_map.find(key.first);
+		EXPECT_NE(it, readAtlas.town_map.end());
+		EXPECT_EQ(key.second.id, it->second.id);
+		EXPECT_EQ(key.second.size, it->second.size);
+		EXPECT_EQ(key.second.name, it->second.name);
+	}
 }
 } // Tests

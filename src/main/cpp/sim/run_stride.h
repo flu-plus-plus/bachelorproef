@@ -41,7 +41,7 @@ public:
 	void BeforeSimulatorStep(Simulator& simulator);
 
 	/// Performs an action just after a simulator step has been performed.
-	void AfterSimulatorStep(const Simulator& simulator);
+	void AfterSimulatorStep(Simulator& simulator);
 
 private:
 	util::Stopwatch<> run_clock;
