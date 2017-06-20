@@ -31,9 +31,13 @@ build*/
 #------------------------------------
 src/doc/*/*.aux
 src/doc/*/*.bbl
+src/doc/*/*.bib
 src/doc/*/*.blg
 src/doc/*/*.out
 src/doc/*/*.synctex.gz
 src/doc/*/*.toc
 src/doc/*/*.pdf
 src/doc/*/*.log
+src/doc/*/*.run.xml
+*.pygtex
+*.pygstyle

@@ -4,6 +4,7 @@
 \usepackage{amssymb}
 \usepackage{parskip}
 \usepackage{microtype}
+\usepackage{minted}
 \usepackage{hyperref}
 \usepackage{pxfonts}
 \frenchspacing
@@ -12,7 +13,7 @@
 \newcommand{\sourcefile}[1]{\texttt{src/main/cpp/#1}}
 \newcommand{\shorttypename}[1]{\texttt{#1}}
 % \newcommand{\typename}[2]{\texttt{#1::#2}} % namespaces (qualified names)
-\newcommand{\typename}[2]{\texttt{#2}} % no namespaces (unqualified names)
+\newcommand{\typename}[2]{\mintinline{cpp}{#2}} % no namespaces (unqualified names)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \title{Project Report: Flu++ Group}
@@ -23,54 +24,52 @@
 \begin{document}
 \maketitle
 \section*{Preface}
-This document is a retrospective report for our bachelor's degree group project: a fork of the \emph{Stride} disease modeling simulator. \autocite{bachelorproef} We will give an overview of the features we added, and describe the hurdles and obstacles we ran into while implementing each of them.
+This document is a retrospective report for our bachelor's degree group project: a fork of the \emph{Stride} disease modeling simulator. \footfullcite{bachelorproef} We will give an overview of the features we added, and describe the hurdles and obstacles we ran into while implementing each of them.
 
 \tableofcontents
 \pagebreak
 
 \section{HDF5 checkpointing}
-The HDF5 checkpointing was only partly implemented. There is also 1 additional feature: if an iterrupt is called during a single simulation, the current step will be completed and the result will be saved. This does not work with multiregion simulators due to a lack of time to implement this feature.
+The HDF5 checkpointing was only partly implemented. There is also one additional feature: if an interrupt is signaled during a single-region simulation, the current step will be completed and the result will be saved.
 
 \subsection{HDF5 library}
-For this project, we used the recommended C API from HDF5.
-It is possible to make the project without having the HDF5 library or to compile it using the macro STRIDE\_FORCE\_NO\_HDF5. This will disable all things related to checkpointing. It will not even be compiled.
+For this project, we used the recommended C language API from HDF5.
+If CMake detects the absence of the HDF5 library, the code relating to checkpointing is ignored during compilation. This behavior can be enforced using the \texttt{STRIDE\_FORCE\_NO\_HDF5} flag.
 
 \subsection{Approach}
 We started with making a checkpointing mechanism for a single simulation.
 
-We save everything used in the configuration. The files are kept als a string of characters. Other configuration variables are saved as attributes of the group containing those files. The Atlas and Towns used in the visualisation are also saved in this config map.
-\\
-Other maps have the date from the checkpoint as name. These contain a dataset with all the info about the population, a dataset with all the extra information about the visitors, a dataset with all the information about the expatriates and finally a dataset for each clustertype. These cluster datasets have a somewhat weird format too make sure we save all the clusters. The first column is the clusterID. The second column contains the UserID of a used in that cluster. If there is a new cluster, it will first be a clusterID and 0. This is to make sure empty clusters are also saved.
-\\
-For a multi simulation checkpoint, we just put all the checkpoints of the used single simulations together. This makes it very easy to load the different simulations because we just need to extract the corresponding checkpoint from the multicheckpoint.
+We save everything used in the configuration. The files are stored as a string of characters. Other configuration variables are stored as attributes of the group containing those files. The \texttt{Atlas} and \text{Town} structures used by the visualization tool are also saved in this config map.
+
+Other maps are named by their checkpoint date. These contain a dataset with all the info about the population, a dataset with all the extra information about the visitors, a dataset with all the information about the expatriates, and finally a dataset for each cluster type. A cluster is stored as a list of records containing a cluster ID and a person ID. The fictitious person ID 0 is listed for every empty cluster, to make sure such a cluster is represented by at least one record.
+
+For a multi-region simulation checkpoint, we simply group all the single-region checkpoints from the individual simulations together.
 
 \subsection{Editing HDF5 files}
-During the programming, we used hdfview 2.9 to look at the h5-files. At the start, we edited these files immideately to get other configurations. 
-Towards the end, we made the stridecp program to be able to edit some things in the h5 file.
-\\Following things can be changed in the h5 file using stridecp:
+We used the \texttt{hdfview} tool to examine the exported \texttt{.h5} files. We also wrote the \texttt{stridecp} program to be able to edit some parts of such a file. These parameters of a Stride \texttt{.h5} file can be tweaked using \texttt{stridecp}:
 \begin{itemize}
 	\item The disease file
 	\item The contact matrix
-	\item Following configuration features:
+	\item Several configuration features:
 	\begin{itemize}
-		\item Wether or not to track the index case
-		\item R0 value
+		\item Whether or not to track the index case
+		\item The $R_0$ value
 		\item The RNG seed
 		\item The amount of days to simulate
-		\item Log Mode
-		\item The prefix to the log files
+		\item The logging flag
+		\item The prefix for the log files
 	\end{itemize}
 \end{itemize}
 \subsection{Missing Features}
-There are 2 missing features in checkpointing. It does not work with MPI and we doe not have a ParaView plug-in.
+There are two missing features in our checkpointing implementation: it does not interface with MPI, and we did not write a ParaView plug-in.
 
 \subsubsection{MPI}
 The whole MPI part is missing from this project. That is why checkpointing also does not have a MPI implementation. We did look for a way to do this, but we could not find an easy way to send data over an MPI link.
 
-\subsubsection{ParaView Plugin}
-We heard from other groups that there were a lot of problems with ParaView (ParaView not compiling, Segmentation Fault on loading a plugin, ...). This and a lack of time are the reasons this feature is missing.
+\subsubsection{ParaView plugin}
+We heard from other groups that there were a lot of problems with ParaView (ParaView not compiling, segmentation fault on loading a plugin, \dots). This, combined with time pressure, explains why this feature is missing.
 
-C'{e}dric wrote everything to do with checkpointing.
+C\'edric wrote everything to do with checkpointing.
 
 \section{Parallelization}
 
@@ -170,7 +169,7 @@ Jonathan implemented multi-region simulations.
 
 \subsection{Notes on MPI-based multi-region simulation}
 
-We had planned to implement MPI-based multi-region simulation6 setup and transfer by serializing the state of a single-region simulation as a checkpoint, sending the checkpoint to another machine or process as a byte stream and then deserializing the checkpoint into a simulation. We imagined that using HDF5-based checkpoints over an ad-hoc format would save us work, reduce code duplication and reduce serialized checkpoint sizes.
+We had planned to implement MPI-based multi-region simulation setup and transfer by serializing the state of a single-region simulation as a checkpoint, sending the checkpoint to another machine or process as a byte stream and then deserializing the checkpoint into a simulation. We imagined that using HDF5-based checkpoints over an ad-hoc format would save us work, reduce code duplication and reduce serialized checkpoint sizes.
 
 Sadly, checkpointing support materialized later than expected---key single-region simulation checkpointing functionality landed in the master branch just after the beta presentation. Even then, the checkpointing API was not yet entirely suitable for usage in MPI-based multi-region simulations.
 
@@ -211,8 +210,13 @@ A further advantage of this approach is that the interface between the simulatio
 Sibert implemented visualization.
 
 \section{Overarching tasks}
-\subsection{Team cooperation} % how did we divide work? etc.
 \subsection{Workflow} % talk about issues and GitHub PRs
+Our workflow was heavily reliant on the tools offered by GitHub for team collaboration.
+
+Each team member contributed to the project through feature branches on their own fork. Whenever a feature was finished, a pull request was made to the \texttt{flu-plus-plus} repository. Such a PR could only be merged into the master branch after approval by both our CI server (see next section) and at least one other team member (using GitHub's code review interface).
+
+This approach forced us to keep track of each other's work, which is invaluable in a highly interdependent project with as many interacting functionalities as Stride.
+
 \subsection{Tests and CI} % Jenkins, Travis, test reports
 
 We initially set up both Jenkins and Travis CI for our project, but later abandoned Jenkins in favor of an all-Travis workflow.
@@ -226,6 +230,7 @@ Whenever someone pushes at least one commit to their fork of the master reposito
 	\item Generate a comparison report and push it to \url{https://flu-plus-plus.github.io/gtest-reports/comparison.html}.
 \end{enumerate}
 
+\pagebreak
 The above happens on every push for the following targets:
 
 \begin{tabular}{l|l|l}
@@ -242,12 +247,11 @@ In addition to building our commits, Travis also makes sure that our pull reques
 
 All of this is integrated nicely in GitHub's pull request workflow: a status badge tells us if a pull request builds and passes all tests. Additionally, we configured GitHub's \emph{protected branches} feature to require that the Travis build always succeed before merging a pull request into the master branch of our master repository. Barring nondeterminism, this configuration ensures that the master branch's tests never fail.
 
-\subsection{Documentation}
-\subsection{The Gantt chart}
-\subsection{Merging with \texttt{comp}}
+\subsection{Merging with the upstream Stride repository}
+One unique hurdle we faced was the assignment of merging our changes to the code with those made upstream by the members of the Stride team during the project. We knew the two codebases would keep diverging anyway, so we held this task off as far as we could. Throughout the majority of the project, however, this demotivated us from refactoring or formatting any of the source files provided to us: we knew doing so would just cause us more work during the final upstream merge. This meant we had to work with an unformatted and sometimes ill-documented codebase as our foundation, without getting an opportunity to fix anything until the very end.
 
-\pagebreak
-\printbibliography
-% This is assuming there'll be more references, but it might be silly to list them if not. We could inline them into the footnotes or something.
+In the end, the merge itself was performed by looking at a \texttt{diff} between a commit from around the start of the project and the latest \texttt{comp/master} commit, and replaying those changes onto our code manually. The code we had to merge with was largely undocumented and lacked tests, so it was often difficult to carry over a change without knowing the intent behind it (or being able to verify that we merged it in successfully.)
 
+% \pagebreak
+% \printbibliography
 \end{document}
